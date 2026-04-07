@@ -1,0 +1,105 @@
+export const staticPOSPermissionsList = [
+  'pos',
+  'pos.sale-price',
+  'pos.discount',
+  'pos.out-of-stock',
+  'pos.invoice',
+  'pos.sales.cash',
+  'pos.sales.payment',
+  'pos.sales.hold',
+  'pos.sales.coupon',
+  'pos.sales.edit',
+  'pos.sales.return',
+  'pos.sales.sample',
+  'pos.sales.quotation',
+  'pos.product.comments',
+  'pos.beep',
+  'pos.sales.edit_advance',
+  'pos.gdn',
+  'pos.expense.dateField'
+];
+
+export const staticPOSInvoicePermissionList = [
+  'company_name',
+  'company_address',
+  'store_name',
+  'store_address',
+  'customer_name',
+  'customer_address',
+  'customer_id',
+  'salesman_name',
+  'salesman_id',
+  'invoice_no',
+  'physical_invoice_no',
+  'cashier_name',
+  'status',
+  'notes',
+  'date'
+];
+
+export const staticPOSCustomerTablePermissionsList = [
+  'customer-table.view',
+  'customer-table.add',
+  'customer-table.edit',
+  'customer-table.delete',
+  'customer-table.show.ticket',
+  'customer-table.show.invoice',
+  'customer-table.show.gsis',
+  'customer-table.show.raw_bill',
+  'customer-table.cover',
+  'customer-table.captain',
+  'customer-table.invoice_type'
+];
+
+export const POS_PERMISSION_STRING = {
+  PERMISSION_POS: 'pos',
+  PERMISSION_SALE_PRICE: 'pos.sale-price',
+  PERMISSION_DISCOUNT: 'pos.discount',
+  PERMISSION_OUT_OF_STOCK: 'pos.out-of-stock',
+  PERMISSION_INVOICE: 'pos.invoice',
+  PERMISSION_SALES_CASH: 'pos.sales.cash',
+  PERMISSION_SALES_PAYMENT: 'pos.sales.payment',
+  PERMISSION_SALES_HOLD: 'pos.sales.hold',
+  PERMISSION_SALES_COUPON: 'pos.sales.coupon',
+  PERMISSION_SALES_EDIT: 'pos.sales.edit',
+  PERMISSION_SALES_RETURN: 'pos.sales.return',
+  PERMISSION_SALES_SAMPLE: 'pos.sales.sample',
+  PERMISSION_SALES_QUOTATION: 'pos.sales.quotation',
+  PERMISSION_PRODUCT_COMMENTS: 'pos.product.comments',
+  PERMISSION_POS_BEEP: 'pos.beep',
+  PERMISSION_SALES_EDIT_ADVANCE: 'pos.sales.edit_advance',
+  PERMISSION_GDN: 'pos.gdn',
+  PERMISSION_EXPENSE_DATEFIELD: 'pos.expense.dateField',
+};
+
+export const INVOICE_FIELDS_PERMISSIONS = {
+  POS_INVOICE_CONST_COMPANY_NAME: 'company_name',
+  POS_INVOICE_CONST_COMPANY_ADDRESS: 'company_address',
+  POS_INVOICE_CONST_STORE_NAME: 'store_name',
+  POS_INVOICE_CONST_STORE_ADDRESS: 'store_address',
+  POS_INVOICE_CONST_CUSTOMER_NAME: 'customer_name',
+  POS_INVOICE_CONST_CUSTOMER_ID: 'customer_id',
+  POS_INVOICE_CONST_CUSTOMER_ADDRESS: 'customer_address',
+  POS_INVOICE_CONST_SALESMAN_NAME: 'salesman_name',
+  POS_INVOICE_CONST_SALESMAN_ID: 'salesman_id',
+  POS_INVOICE_CONST_INVOICE_NO: 'invoice_no',
+  POS_INVOICE_CONST_PHYSICAL_INVOICE_NO: 'physical_invoice_no',
+  POS_INVOICE_CONST_CASHIER_NAME: 'cashier_name',
+  POS_INVOICE_CONST_STATUS: 'status',
+  POS_INVOICE_CONST_NOTES: 'notes',
+  POS_INVOICE_CONST_DATE: 'date',
+};
+
+export const CUSTOMER_TABLE_PERMISSION_STRINGS = {
+  PERMISSION_CUSTOMER_TABLE_VIEW: 'customer-table.view',
+  PERMISSION_CUSTOMER_TABLE_ADD: 'customer-table.add',
+  PERMISSION_CUSTOMER_TABLE_EDIT: 'customer-table.edit',
+  PERMISSION_CUSTOMER_TABLE_DELETE: 'customer-table.delete',
+  PERMISSION_CUSTOMER_TABLE_SHOW_TICKET: 'customer-table.show.ticket',
+  PERMISSION_CUSTOMER_TABLE_SHOW_INVOICE: 'customer-table.show.invoice',
+  PERMISSION_CUSTOMER_TABLE_GSIS: 'customer-table.show.gsis',
+  PERMISSION_CUSTOMER_TABLE_RAW_BILL: 'customer-table.show.raw_bill',
+  PERMISSION_CUSTOMER_TABLE_COVER: 'customer-table.cover',
+  PERMISSION_CUSTOMER_TABLE_CAPTAIN: 'customer-table.captain',
+  PERMISSION_CUSTOMER_TABLE_INVOICE_TYPE: 'customer-table.invoice_type',
+};

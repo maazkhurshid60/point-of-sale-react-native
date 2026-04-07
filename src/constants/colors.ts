@@ -1,0 +1,15 @@
+export const COLORS = {
+  primary: "#6A1B9A",
+  posRed: "rgba(252, 96, 66, 1)",
+  posGreen: "rgba(44, 201, 144, 1)",
+  posYellow: "rgba(252, 185, 65, 1)",
+  posBlue: "rgba(0, 113, 189, 1)",
+  inAppBackground: "rgba(240, 240, 240, 1)",
+  posDark: "rgba(56, 52, 67, 1)",
+  posDialogBoxBackground: "rgba(235, 235, 235, 1)",
+  greyText: "rgba(142, 142, 142, 1)",
+  textDark: "rgba(75, 92, 105, 1)",
+  tabBarBackground: "rgba(217, 217, 217, 1)",
+  white: "#FFFFFF",
+  black: "#000000",
+};
