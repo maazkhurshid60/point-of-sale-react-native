@@ -63,7 +63,7 @@ export const ShiftDetailsScreen: React.FC = () => {
 
   // TanStack Query for shift details
   const { data: currentShiftData, isLoading: loading, refetch } = useShiftDetails(currentShift?.shift_id);
-
+  console.log("data of the shift details", currentShiftData);
   if (loading) {
     return (
       <View style={styles.centerContainer}>

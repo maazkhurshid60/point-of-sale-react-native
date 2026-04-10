@@ -123,7 +123,6 @@ export const useAuthStore = create<AuthState>()(
           const res = await axiosClient.post(API_ENDPOINTS.AUTH.LOGIN, null, {
             params: { username, password }
           });
-
           if (res.status === 200 && res.data?.success) {
             const data = res.data.data;
             const mappedPermissions = (data.permissions || [])
