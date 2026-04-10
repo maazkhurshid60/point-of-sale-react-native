@@ -1,116 +1,117 @@
-// import { useQuery } from '@tanstack/react-query';
-// import axiosClient from './axiosClient';
-// import { useAuthStore } from '../store/useAuthStore';
-// import { API_ENDPOINTS } from '../constants/apiEndpoints';
-// import { Store, POSId, Customer, Salesman, CashAccount, BankAccount, CreditCardAccount } from '../models';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import axiosClient from './axiosClient';
+import { useAuthStore } from '../store/useAuthStore';
+import { API_ENDPOINTS } from '../constants/apiEndpoints';
+import { Store, POSId, Customer, Salesman, CashAccount, BankAccount, CreditCardAccount } from '../models';
 
-// // Generic fetcher for all catalog items to maintain DRY principle
-// const fetchCatalog = async <T>(endpoint: string, params?: Record<string, any>): Promise<T[]> => {
-//   const baseURL = useAuthStore.getState().baseURL;
-//   const token = useAuthStore.getState().authToken;
-//   if (!baseURL || !token) return [];
+// Generic fetcher for all catalog items
+const fetchCatalog = async <T>(endpoint: string, params?: Record<string, any>): Promise<T[]> => {
+  const response = await axiosClient.get(endpoint, { params });
+  return response.data?.success ? (response.data.data ?? response.data.stores ?? response.data.accounts ?? response.data.customers ?? []) : [];
+};
 
-//   const response = await axiosClient.get(`${baseURL}${endpoint}`, {
-//     headers: { Authorization: `Bearer ${token}` },
-//     params // optional params
-//   });
-//   return response.data?.success ? response.data.data : [];
-// };
+export const useStores = () => {
+  return useQuery<Store[]>({
+    queryKey: ['stores'],
+    queryFn: async () => {
+      try {
+        const res = await axiosClient.get(API_ENDPOINTS.CATALOG.STORES);
+        return (res.data?.success && res.data.store) ? res.data.store : [];
+      } catch (e) {
+        return [];
+      }
+    },
+    staleTime: 1000 * 60 * 5,
+  });
+};
 
-// export const useStores = () => {
-//   return useQuery<Store[]>({
-//     queryKey: ['stores'],
-//     queryFn: () => fetchCatalog(API_ENDPOINTS.CATALOG.STORES),
-//     staleTime: 1000 * 60 * 5, // 5 minutes cache
-//   });
-// };
+export const usePOSIDs = () => {
+  return useQuery<POSId[]>({
+    queryKey: ['posIds'],
+    queryFn: async () => {
+      try {
+        const res = await axiosClient.get(API_ENDPOINTS.SHIFT.POS_OPTIONS);
+        return (res.data?.success && res.data.fbr) ? res.data.fbr : [];
+      } catch (e) {
+        return [];
+      }
+    },
+    staleTime: 1000 * 60 * 10,
+  });
+};
 
-// export const usePOSIDs = () => {
-//   return useQuery<POSId[]>({
-//     queryKey: ['posIds'],
-//     queryFn: () => fetchCatalog(API_ENDPOINTS.SHIFT.POS_OPTIONS),
-//     staleTime: 1000 * 60 * 10,
-//   });
-// };
+export const useCustomers = () => {
+  return useQuery<Customer[]>({
+    queryKey: ['customers'],
+    queryFn: () => fetchCatalog(API_ENDPOINTS.CATALOG.CUSTOMERS),
+  });
+};
 
-// export const useCustomers = () => {
-//   return useQuery<Customer[]>({
-//     queryKey: ['customers'],
-//     queryFn: () => fetchCatalog(API_ENDPOINTS.CATALOG.CUSTOMERS),
-//   });
-// };
+export const useSalesman = () => {
+  return useQuery<Salesman[]>({
+    queryKey: ['salesmen'],
+    queryFn: () => fetchCatalog(API_ENDPOINTS.SHIFT.SALES_MAN),
+  });
+};
 
-// export const useSalesman = () => {
-//   return useQuery<Salesman[]>({
-//     queryKey: ['salesmen'],
-//     queryFn: () => fetchCatalog(API_ENDPOINTS.SHIFT.SALES_MAN),
-//   });
-// };
+export const useCashAccounts = () => {
+  return useQuery<CashAccount[]>({
+    queryKey: ['cashAccounts'],
+    queryFn: () => fetchCatalog(API_ENDPOINTS.CATALOG.CASH_ACCOUNTS),
+  });
+};
 
-// export const useTaxes = () => {
-//   const shiftId = useAuthStore.getState().currentShift?.shift_id;
-//   return useQuery({
-//     queryKey: ['taxes', shiftId],
-//     queryFn: async () => {
-//       const baseURL = useAuthStore.getState().baseURL;
-//       const token = useAuthStore.getState().authToken;
-//       const response = await axiosClient.get(`${baseURL}/api/tax`, {
-//         params: { shift_id: shiftId },
-//         headers: { Authorization: `Bearer ${token}` }
-//       });
-//       return response.data; // { success: true, taxes: [...], selectedTaxes: [...] }
-//     },
-//     enabled: !!shiftId,
-//   });
-// };
+export const useBankAccounts = () => {
+  return useQuery<BankAccount[]>({
+    queryKey: ['bankAccounts'],
+    queryFn: () => fetchCatalog(API_ENDPOINTS.CATALOG.BANK_ACCOUNTS),
+  });
+};
 
-// export const useCashAccounts = () => {
-//   return useQuery<CashAccount[]>({
-//     queryKey: ['cashAccounts'],
-//     queryFn: () => fetchCatalog(API_ENDPOINTS.CATALOG.CASH_ACCOUNTS),
-//   });
-// };
+export const useCreditCardAccounts = () => {
+  return useQuery<CreditCardAccount[]>({
+    queryKey: ['creditCardAccounts'],
+    queryFn: () => fetchCatalog(API_ENDPOINTS.CATALOG.CREDIT_CARD_ACCOUNTS),
+  });
+};
 
-// export const useBankAccounts = () => {
-//   return useQuery<BankAccount[]>({
-//     queryKey: ['bankAccounts'],
-//     queryFn: () => fetchCatalog(API_ENDPOINTS.CATALOG.BANK_ACCOUNTS),
-//   });
-// };
+export const useShiftDetails = (shiftId?: number) => {
+  return useQuery({
+    queryKey: ['shiftDetails', shiftId],
+    queryFn: async () => {
+      if (!shiftId) return null;
+      const res = await axiosClient.get(API_ENDPOINTS.SHIFT.DETAILS, {
+        params: { shift_id: shiftId }
+      });
+      return res.data?.success ? res.data : null;
+    },
+    enabled: !!shiftId,
+  });
+};
 
-// export const useCreditCardAccounts = () => {
-//   return useQuery<CreditCardAccount[]>({
-//     queryKey: ['creditCardAccounts'],
-//     queryFn: () => fetchCatalog(API_ENDPOINTS.CATALOG.CREDIT_CARD_ACCOUNTS),
-//   });
-// };
+export const useUpdateCashManagement = () => {
+  const queryClient = useQueryClient();
+  const currentShift = useAuthStore(state => state.currentShift);
 
-// export const useAccountHeads = () => {
-//   return useQuery<any[]>({
-//     queryKey: ['accountHeads'],
-//     queryFn: () => fetchCatalog(API_ENDPOINTS.CATALOG.ACCOUNT_HEADS),
-//   });
-// };
-
-// export const usePOList = () => {
-//   return useQuery<any[]>({
-//     queryKey: ['poList'],
-//     queryFn: () => fetchCatalog(API_ENDPOINTS.CATALOG.PO_LIST),
-//   });
-// };
-
-// // Shift Details is critical for POS - we enable auto-refetch here
-// export const useShiftDetails = () => {
-//   return useQuery({
-//     queryKey: ['shiftDetails'],
-//     queryFn: async () => {
-//       const baseURL = useAuthStore.getState().baseURL;
-//       const token = useAuthStore.getState().authToken;
-//       const response = await axiosClient.get(`${baseURL}${API_ENDPOINTS.SHIFT.DETAILS}`, {
-//         headers: { Authorization: `Bearer ${token}` }
-//       });
-//       return response.data;
-//     },
-//     enabled: !!useAuthStore.getState().isShiftOpened,
-//   });
-// };
+  return useMutation({
+    mutationFn: async ({ paidIn, paidOut, notes }: { paidIn: string, paidOut: string, notes: string }) => {
+      if (!currentShift) throw new Error("No active shift");
+      const res = await axiosClient.get(API_ENDPOINTS.TRANSACTIONS.PAID_IN_OUT, {
+        params: { 
+          shift_id: currentShift.shift_id, 
+          paid_in: paidIn, 
+          paid_out: paidOut, 
+          note: notes 
+        }
+      });
+      if (!res.data?.success) {
+        throw new Error(res.data?.message || 'Failed to update cash management');
+      }
+      return res.data;
+    },
+    onSuccess: () => {
+      // Invalidate the shift details query to trigger a refetch
+      queryClient.invalidateQueries({ queryKey: ['shiftDetails'] });
+    }
+  });
+};

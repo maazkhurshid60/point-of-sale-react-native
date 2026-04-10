@@ -23,7 +23,7 @@ export default function SplashScreen() {
     // Navigation logic after 3 seconds
     const timer = setTimeout(() => {
       if (isUserLoggedIn) {
-        navigation.replace('Dashboard');
+        navigation.replace('Dashboard' as never); // In case we restore it later
       } else if (!hasSeenOnboarding) {
         navigation.replace('Onboarding');
       } else {

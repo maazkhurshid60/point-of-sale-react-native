@@ -53,7 +53,7 @@ axiosClient.interceptors.response.use(
     if (error?.response?.status === 401) {
       // Automatic local cleanup if token is rejected
       // We don't call the API signOut because the token is already invalid
-      useAuthStore.getState().signOut();
+      useAuthStore.getState().clearAuthData();
     } else {
       // Only log actual field errors or unexpected crashes
       console.error("API Error: ", error?.response?.data || error.message);

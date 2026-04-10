@@ -1,4 +1,4 @@
-export * from './chat';
+// export * from './chat';
 export interface Store {
   store_id: number;
   name: string;
@@ -17,6 +17,7 @@ export interface ShiftDetails {
   default_bank_account?: number;
   default_card_account?: number;
   salesman_id?: number;
+  fbr_sales_enabled?: boolean;
 }
 
 export interface TaxModel {
@@ -273,6 +274,8 @@ export interface SaleHistoryItem {
   balance: number;
   actual_bill: number;
 }
+
+export interface HoldSaleModel extends SaleHistoryItem {}
 
 export interface SaleDetails {
   sale: any;

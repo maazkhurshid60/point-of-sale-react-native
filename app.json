@@ -6,7 +6,8 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
+    "scheme": "owners-inventory-rn",
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -22,20 +23,13 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.anonymous.owners_inventory_rn"
+      "package": "com.yourname.ownerspos",
+      "googleServicesFile": "./google-services.json"
     },
-    "web": {
-      "favicon": "./assets/favicon.png"
-    },
-    "plugins": [
-      [
-        "@react-native-firebase/app",
-        {
-          "config": {
-            "googleServicesFile": "./google-services.json"
-          }
-        }
-      ]
-    ]
+    "extra": {
+      "eas": {
+        "projectId": "de685798-7217-4928-a7b9-3c174ff66dcd"
+      }
+    }
   }
 }

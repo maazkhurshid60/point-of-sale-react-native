@@ -1,229 +1,231 @@
-// import React, { useState } from 'react';
-// import {
-//   View,
-//   Text,
-//   TextInput,
-//   TouchableOpacity,
-//   StyleSheet,
-//   ActivityIndicator,
-//   useWindowDimensions,
-//   Alert,
-// } from 'react-native';
-// import { useUpdateCashManagementMutation } from '../../api/shift/mutations';
-// import { COLORS } from '../../constants/colors';
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
+  useWindowDimensions,
+  Alert,
+} from 'react-native';
+import { COLORS } from '../../constants/colors';
+import { TYPOGRAPHY } from '../../constants/typography';
+import { FontAwesome6 } from '@expo/vector-icons';
+import { useUpdateCashManagement } from '../../api/queries';
 
-// interface CashManagementDialogProps {
-//   onClose: (success?: boolean) => void;
-// }
+interface CashManagementDialogProps {
+  onClose: () => void;
+  onSuccess?: (success: boolean) => void;
+}
 
-// export default function CashManagementDialog({ onClose }: CashManagementDialogProps) {
-//   const { width, height } = useWindowDimensions();
-//   const isPortrait = height > width;
-//   const isSmallWidth = width < 610 && isPortrait;
+export default function CashManagementDialog({ onClose, onSuccess }: CashManagementDialogProps) {
+  const { width, height } = useWindowDimensions();
+  const isPortrait = height > width;
+  
+  const { mutateAsync: updateCashManagement, isPending } = useUpdateCashManagement();
 
-//   const [paidIn, setPaidIn] = useState('');
-//   const [paidOut, setPaidOut] = useState('');
-//   const [notes, setNotes] = useState('');
+  const [paidIn, setPaidIn] = useState('');
+  const [paidOut, setPaidOut] = useState('');
+  const [notes, setNotes] = useState('');
 
-//   const { mutateAsync: updateCashManagement, isPending } = useUpdateCashManagementMutation();
+  const handleOkay = async () => {
+    try {
+      const pIn = paidIn ? parseFloat(paidIn) : 0;
+      const pOut = paidOut ? parseFloat(paidOut) : 0;
 
-//   const handleOkay = async () => {
-//     try {
-//       const pIn = parseFloat(paidIn || '0');
-//       const pOut = parseFloat(paidOut || '0');
+      if ((paidIn && isNaN(pIn)) || (paidOut && isNaN(pOut))) {
+        Alert.alert('Error', 'Please enter valid numbers only');
+        return;
+      }
 
-//       if (isNaN(pIn) || isNaN(pOut)) {
-//         throw new Error('Please use numbers only');
-//       }
+      await updateCashManagement({ 
+        paidIn: pIn.toString(), 
+        paidOut: pOut.toString(), 
+        notes 
+      });
+      if (onSuccess) onSuccess(true);
+      onClose();
+    } catch (e: any) {
+      Alert.alert('Error', e.message || 'Failed to update cash management');
+    }
+  };
 
-//       await updateCashManagement({
-//         paidIn: pIn,
-//         paidOut: pOut,
-//         notes: notes,
-//       });
+  return (
+    <View style={[styles.dialogCard, { width: isPortrait ? '92%' : 520 }]}>
+      {/* Header */}
+      <View style={styles.header}>
+        <FontAwesome6 name="money-bill-transfer" size={22} color={COLORS.primary} />
+        <Text style={styles.title}>Cash Management</Text>
+      </View>
 
-//       onClose(true);
-//     } catch (e: any) {
-//       Alert.alert('Error', e.message || 'Failed to update cash management');
-//     }
-//   };
+      {/* Paid In / Paid Out */}
+      <View style={styles.amountsRow}>
+        <View style={styles.amountContainer}>
+          <View style={styles.labelRow}>
+            <FontAwesome6 name="arrow-down" size={12} color={COLORS.posGreen} />
+            <Text style={styles.label}>Paid In</Text>
+          </View>
+          <TextInput
+            style={[styles.amountInput, { borderColor: COLORS.posGreen }]}
+            value={paidIn}
+            onChangeText={setPaidIn}
+            keyboardType="numeric"
+            placeholder="0.00"
+            placeholderTextColor="rgba(142, 142, 142, 0.5)"
+            textAlign="center"
+            maxLength={10}
+            editable={!isPending}
+          />
+        </View>
 
-//   return (
-//     <View style={[styles.dialogCard, { width: isPortrait ? '90%' : 500 }]}>
-//       <Text style={styles.title}>Cash Management</Text>
+        <View style={{ width: 16 }} />
 
-//       <View style={styles.amountsRow}>
-//         {/* Paid In */}
-//         <View style={styles.amountContainer}>
-//           <Text style={[styles.label, { fontSize: isSmallWidth ? 18 : 14 }]}>Paid In</Text>
-//           <View style={styles.inputContainer}>
-//             <TextInput
-//               style={styles.amountInput}
-//               value={paidIn}
-//               onChangeText={setPaidIn}
-//               keyboardType="numeric"
-//               placeholder="Amount"
-//               placeholderTextColor="rgba(142, 142, 142, 0.5)"
-//               textAlign="center"
-//               maxLength={7}
-//               editable={!isPending}
-//             />
-//           </View>
-//         </View>
+        <View style={styles.amountContainer}>
+          <View style={styles.labelRow}>
+            <FontAwesome6 name="arrow-up" size={12} color={COLORS.posRed} />
+            <Text style={styles.label}>Paid Out</Text>
+          </View>
+          <TextInput
+            style={[styles.amountInput, { borderColor: COLORS.posRed }]}
+            value={paidOut}
+            onChangeText={setPaidOut}
+            keyboardType="numeric"
+            placeholder="0.00"
+            placeholderTextColor="rgba(142, 142, 142, 0.5)"
+            textAlign="center"
+            maxLength={10}
+            editable={!isPending}
+          />
+        </View>
+      </View>
 
-//         <View style={{ width: 20 }} />
+      {/* Remarks */}
+      <Text style={[styles.label, { alignSelf: 'flex-start', marginTop: 16 }]}>Remarks (Optional)</Text>
+      <TextInput
+        style={styles.remarksInput}
+        value={notes}
+        onChangeText={setNotes}
+        placeholder="Add a note..."
+        placeholderTextColor="rgba(142,142,142,0.5)"
+        multiline
+        numberOfLines={2}
+        maxLength={150}
+        editable={!isPending}
+      />
 
-//         {/* Paid Out */}
-//         <View style={styles.amountContainer}>
-//           <Text style={[styles.label, { fontSize: isSmallWidth ? 18 : 14 }]}>Paid Out</Text>
-//           <View style={styles.inputContainer}>
-//             <TextInput
-//               style={styles.amountInput}
-//               value={paidOut}
-//               onChangeText={setPaidOut}
-//               keyboardType="numeric"
-//               placeholder="Amount"
-//               placeholderTextColor="rgba(142, 142, 142, 0.5)"
-//               textAlign="center"
-//               maxLength={7}
-//               editable={!isPending}
-//             />
-//           </View>
-//         </View>
-//       </View>
+      {/* Actions */}
+      <View style={styles.actions}>
+        <TouchableOpacity style={styles.cancelBtn} onPress={() => onClose()} disabled={isPending}>
+          <Text style={styles.cancelText}>Cancel</Text>
+        </TouchableOpacity>
 
-//       <View style={{ height: isSmallWidth ? 10 : 20 }} />
+        <TouchableOpacity style={styles.okayBtn} onPress={handleOkay} disabled={isPending}>
+          {isPending ? (
+            <ActivityIndicator size="small" color="white" />
+          ) : (
+            <Text style={styles.okayText}>Confirm</Text>
+          )}
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
 
-//       {/* Remarks */}
-//       <Text style={[styles.label, { fontSize: isSmallWidth ? 18 : 16, alignSelf: 'flex-start' }]}>Remarks</Text>
-//       <TextInput
-//         style={[styles.remarksInput, { fontSize: isSmallWidth ? 18 : 14 }]}
-//         value={notes}
-//         onChangeText={setNotes}
-//         placeholder="Type your remark."
-//         placeholderTextColor="rgba(textDarkColor, 0.5)"
-//         multiline
-//         numberOfLines={2}
-//         maxLength={100}
-//         editable={!isPending}
-//       />
-
-//       <View style={{ height: 20 }} />
-
-//       <View style={styles.actions}>
-//         <TouchableOpacity
-//           style={styles.cancelBtn}
-//           onPress={() => onClose()}
-//           disabled={isPending}
-//         >
-//           <Text style={styles.cancelText}>Cancel</Text>
-//         </TouchableOpacity>
-
-//         <TouchableOpacity
-//           style={styles.okayBtn}
-//           onPress={handleOkay}
-//           disabled={isPending}
-//         >
-//           {isPending ? (
-//             <ActivityIndicator size="small" color={COLORS.white} />
-//           ) : (
-//             <Text style={styles.okayText}>Okay</Text>
-//           )}
-//         </TouchableOpacity>
-//       </View>
-//     </View>
-//   );
-// }
-
-// const styles = StyleSheet.create({
-//   dialogCard: {
-//     backgroundColor: COLORS.white,
-//     borderRadius: 15,
-//     padding: 30,
-//     alignItems: 'center',
-//     elevation: 5,
-//     shadowColor: COLORS.black,
-//     shadowOffset: { width: 0, height: 2 },
-//     shadowOpacity: 0.25,
-//     shadowRadius: 4,
-//   },
-//   title: {
-//     fontSize: 24, // 30 on portrait, 24 on landscape in flutter, but sticking to 24 for simplicity
-//     fontWeight: '700',
-//     color: COLORS.primary,
-//     fontFamily: 'Montserrat',
-//     marginBottom: 20,
-//   },
-//   amountsRow: {
-//     flexDirection: 'row',
-//     justifyContent: 'center',
-//     width: '100%',
-//   },
-//   amountContainer: {
-//     flex: 1,
-//     alignItems: 'center',
-//   },
-//   inputContainer: {
-//     width: '100%',
-//     height: 60,
-//     borderWidth: 1,
-//     borderColor: 'rgba(196, 196, 196, 1)',
-//     borderRadius: 4,
-//     justifyContent: 'center',
-//     marginTop: 10,
-//   },
-//   label: {
-//     color: COLORS.textDark,
-//     fontWeight: '400',
-//     fontFamily: 'Montserrat',
-//   },
-//   amountInput: {
-//     fontSize: 24,
-//     fontWeight: '700',
-//     color: COLORS.textDark,
-//     fontFamily: 'Montserrat',
-//     height: '100%',
-//   },
-//   remarksInput: {
-//     width: '100%',
-//     height: 50,
-//     borderBottomWidth: 1,
-//     borderBottomColor: COLORS.primary,
-//     color: COLORS.textDark,
-//     fontFamily: 'Montserrat',
-//     marginTop: 10,
-//   },
-//   actions: {
-//     flexDirection: 'row',
-//     alignItems: 'center',
-//   },
-//   cancelBtn: {
-//     paddingVertical: 10,
-//     paddingHorizontal: 25,
-//     borderWidth: 1,
-//     borderColor: COLORS.primary,
-//     borderRadius: 6,
-//     marginRight: 10,
-//   },
-//   cancelText: {
-//     color: COLORS.greyText,
-//     fontSize: 16,
-//     fontWeight: '500',
-//     fontFamily: 'Montserrat',
-//   },
-//   okayBtn: {
-//     backgroundColor: COLORS.primary,
-//     paddingVertical: 10,
-//     paddingHorizontal: 30,
-//     borderRadius: 6,
-//     minWidth: 100,
-//     alignItems: 'center',
-//     justifyContent: 'center',
-//   },
-//   okayText: {
-//     color: COLORS.white,
-//     fontSize: 16,
-//     fontWeight: '500',
-//     fontFamily: 'Montserrat',
-//   },
-// });
+const styles = StyleSheet.create({
+  dialogCard: {
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 28,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 10,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 24,
+  },
+  title: {
+    ...TYPOGRAPHY.montserrat.bold,
+    fontSize: 22,
+    color: COLORS.primary,
+  },
+  amountsRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    width: '100%',
+  },
+  amountContainer: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginBottom: 8,
+  },
+  label: {
+    ...TYPOGRAPHY.montserrat.medium,
+    color: '#64748B',
+    fontSize: 13,
+  },
+  amountInput: {
+    width: '100%',
+    height: 60,
+    borderWidth: 1.5,
+    borderRadius: 12,
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#1E293B',
+    backgroundColor: '#F8FAFC',
+  },
+  remarksInput: {
+    width: '100%',
+    minHeight: 60,
+    borderBottomWidth: 1.5,
+    borderBottomColor: COLORS.primary,
+    color: '#1E293B',
+    fontSize: 14,
+    paddingVertical: 8,
+    marginBottom: 24,
+  },
+  actions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    width: '100%',
+  },
+  cancelBtn: {
+    flex: 1,
+    paddingVertical: 13,
+    borderWidth: 1.5,
+    borderColor: '#CBD5E1',
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  okayBtn: {
+    flex: 1,
+    backgroundColor: COLORS.primary,
+    paddingVertical: 13,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 48,
+  },
+  cancelText: {
+    ...TYPOGRAPHY.montserrat.medium,
+    color: '#64748B',
+    fontSize: 15,
+  },
+  okayText: {
+    ...TYPOGRAPHY.montserrat.bold,
+    color: 'white',
+    fontSize: 15,
+  },
+});
