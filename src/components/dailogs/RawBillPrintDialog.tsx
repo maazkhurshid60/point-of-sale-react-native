@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, useWindowDimensions, ActivityIndicator } from 'react-native';
 import { COLORS } from '../../constants/colors';
-import { BaseSlipData } from '../../store/useDialogStore';
+import { BaseSlipData, useDialogStore } from '../../store/useDialogStore';
 import { TRANSFORM_DATE_TIME_TO_STRING } from '../../utils/helpers';
+import { useCartStore } from '../../store/useCartStore';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 
@@ -13,201 +14,149 @@ interface RawBillPrintDialogProps {
 
 export default function RawBillPrintDialog({ slipData, onClose }: RawBillPrintDialogProps) {
   const { width, height } = useWindowDimensions();
-  const isPortrait = height > width;
+  const [isLoading, setIsLoading] = React.useState(false);
+  const makeSale = useCartStore(state => state.makeSale);
+  const showDialog = useDialogStore(state => state.showDialog);
 
-  const generateHTML = () => {
-    const productsHTML = (slipData.saleItemsData || []).map((item: any) => `
-      <tr>
-        <td style="padding: 5px 0;">${item.product?.sku || item.sku || ''}<br>${item.product_name || item.name || ''}</td>
-        <td style="text-align: center;">${item.qty || item.quantity || 0}</td>
-        <td style="text-align: right;">${item.price || item.actual_price || item.selling_price || 0}</td>
-        <td style="text-align: right;">${item.subtotal || 0}</td>
-      </tr>
-    `).join('');
+  // Responsive breakpoints
+  const isTablet = width >= 768;
+  const isMobile = !isTablet;
 
-    return `
-      <html>
-        <body style="font-family: 'Courier New', Courier, monospace; padding: 20px; width: 300px; margin: auto;">
-          <div style="text-align: center; border-bottom: 1px dashed #000; padding-bottom: 10px;">
-            <h2 style="margin: 0;">${slipData.companyData?.company_name || 'Owner Inventory'}</h2>
-            <p style="margin: 5px 0; font-size: 12px;">${slipData.companyData?.lead_street || ''}</p>
-            <p style="margin: 5px 0; font-size: 12px;">${slipData.companyData?.lead_contact || ''}</p>
-          </div>
-          <div style="text-align: center; margin: 10px 0;">
-            <h3 style="margin: 0; text-transform: uppercase;">Raw Bill / Ticket</h3>
-          </div>
-          <div style="font-size: 12px; margin-bottom: 10px; border-bottom: 1px dashed #000; padding-bottom: 10px;">
-            <p style="margin: 2px 0;"><b>Date:</b> ${slipData.saleData?.created_at ? TRANSFORM_DATE_TIME_TO_STRING(new Date(slipData.saleData.created_at), true) : ''}</p>
-            <p style="margin: 2px 0;"><b>Ticket No:</b> ${slipData.saleData?.ticket_no || slipData.saleData?.invoice_no || 'N/A'}</p>
-            <p style="margin: 2px 0;"><b>Customer:</b> ${customerName}</p>
-            <p style="margin: 2px 0;"><b>Cashier:</b> ${cashierName}</p>
-          </div>
-          <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
-            <thead>
-              <tr style="border-bottom: 1px dashed #000;">
-                <th style="text-align: left; padding-bottom: 5px;">Item</th>
-                <th style="text-align: center; padding-bottom: 5px;">Qty</th>
-                <th style="text-align: right; padding-bottom: 5px;">Price</th>
-                <th style="text-align: right; padding-bottom: 5px;">Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${productsHTML}
-            </tbody>
-          </table>
-          <div style="margin-top: 10px; border-top: 1px dashed #000; padding-top: 10px; font-size: 12px;">
-            <div style="display: flex; justify-content: space-between;">
-              <span>Sub-Total</span>
-              <span>${slipData.saleData?.actual_bill || 0}</span>
-            </div>
-            <div style="display: flex; justify-content: space-between;">
-              <span>Discount</span>
-              <span>${slipData.saleData?.total_discount || 0}</span>
-            </div>
-            <div style="display: flex; justify-content: space-between;">
-              <span>Tax</span>
-              <span>${slipData.saleData?.total_tax || 0}</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; font-weight: bold; margin-top: 5px; font-size: 14px;">
-              <span>GRAND TOTAL</span>
-              <span>${slipData.saleData?.total_bill || 0}</span>
-            </div>
-          </div>
-          <div style="text-align: center; margin-top: 20px; font-size: 10px;">
-            <p style="margin: 0; font-weight: bold; color: #cc0000;">*** RAW BILL PRINT ONLY ***</p>
-            <p style="margin: 0;">No sale has been made against this bill</p>
-          </div>
-        </body>
-      </html>
-    `;
+  // Dynamic values
+  const dialogWidth = isTablet ? 900 : width * 0.95;
+  const dialogMaxHeight = height * 0.9;
+
+  const scaleFont = (size: number) => {
+    const scale = isTablet ? 1.2 : 1;
+    return size * scale;
   };
 
-  const handlePrint = async () => {
-    try {
-      await Print.printAsync({
-        html: generateHTML(),
+  const handleTicket = async () => {
+    setIsLoading(true);
+    const result = await makeSale('cash');
+    setIsLoading(false);
+    if (result) {
+      if (onClose) onClose();
+      // After cash sale, flutter shows the ticket/invoice
+      showDialog('INVOICE_SLIP', { 
+        slipData: {
+          saleData: result.sale || result.cashSaleData?.sale || result,
+          companyData: result.company || result.cashSaleData?.company,
+          customerData: result.customer || result.cashSaleData?.customer || slipData.customerData,
+          salesmanData: result.salesman || result.cashSaleData?.salesman || slipData.salesmanData,
+          cashierData: result.cashier || result.cashSaleData?.cashier || slipData.cashierData,
+          saleItemsData: result.sale_items || result.cashSaleData?.sale?.sale_items || [],
+          ...result
+        }
       });
-    } catch (error) {
-      console.error('Print Error:', error);
     }
   };
 
-  const handleShare = async () => {
-    try {
-      const { uri } = await Print.printToFileAsync({
-        html: generateHTML(),
-      });
-      await Sharing.shareAsync(uri);
-    } catch (error) {
-      console.error('Share Error:', error);
-    }
-  };
+  const renderProductRow = (item: any, index: number) => (
+    <View key={index} style={styles.tableRow}>
+      <Text style={[styles.tableCell, { flex: 1.5, fontSize: scaleFont(12) }]}>{item.sku || ''}</Text>
+      <Text style={[styles.tableCell, { flex: 3, fontSize: scaleFont(12) }]}>{item.name || item.product_name || ''}</Text>
+      <Text style={[styles.tableCell, { flex: 1, textAlign: 'center', fontSize: scaleFont(12) }]}>{item.qty || 0}</Text>
+      <Text style={[styles.tableCell, { flex: 1.5, textAlign: 'center', fontSize: scaleFont(12) }]}>{item.selling_price || item.price || 0}</Text>
+      <Text style={[styles.tableCell, { flex: 1, textAlign: 'center', fontSize: scaleFont(12) }]}>{item.discount || 0}</Text>
+      <Text style={[styles.tableCell, styles.cellBold, { flex: 1.5, textAlign: 'right', fontSize: scaleFont(12) }]}>{item.subtotal || 0}</Text>
+    </View>
+  );
 
-  const renderProductRow = (item: any, index: number) => {
-    return (
-      <View key={index} style={styles.tableRow}>
-        <Text style={[styles.tableCell, { flex: 1.5 }]}>{item.product?.sku || item.sku || item.barcode || ''}</Text>
-        <Text style={[styles.tableCell, { flex: 3 }]} numberOfLines={1}>
-          {item.product?.product_name || item.product_name || item.product?.name || item.name || ''}
-        </Text>
-        <Text style={[styles.tableCell, styles.cellBold, { flex: 1, textAlign: 'center' }]}>{item.qty || item.quantity || 0}</Text>
-        <Text style={[styles.tableCell, styles.cellBold, { flex: 1.5, textAlign: 'right' }]}>{item.price || item.actual_price || item.selling_price || 0}</Text>
-        <Text style={[styles.tableCell, styles.cellBold, { flex: 1.5, textAlign: 'right' }]}>{item.subtotal || 0}</Text>
-      </View>
-    );
-  };
-
-  const customerName = slipData.customerData?.name ||
-    (slipData.customerData?.first_name ? `${slipData.customerData.first_name} ${slipData.customerData.last_name || ''}` : 'N/A');
-
-  const cashierName = slipData.cashierData?.name || slipData.cashierData?.first_name || 'N/A';
+  const customerName = slipData.customerData?.name || slipData.usersData?.customer_name || 'N/A';
+  const salesmanName = slipData.salesmanData?.name || slipData.usersData?.salesman_name || 'N/A';
+  const cashierName = slipData.cashierData?.name || slipData.usersData?.sale_person || 'N/A';
 
   return (
-    <View style={[styles.dialogCard, { width: isPortrait ? '95%' : 450, maxHeight: height * 0.9 }]}>
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+    <View style={[styles.dialogCard, { width: dialogWidth, maxHeight: dialogMaxHeight }]}>
+      <ScrollView showsVerticalScrollIndicator={true} contentContainerStyle={styles.scrollContent}>
+        
+        {/* Purple Header Title */}
+        <Text style={[styles.mainTitle, { fontSize: scaleFont(30) }]}>Raw Bill Print</Text>
 
-        {/* Header - Thermal Receipt Style */}
-        <View style={styles.thermalHeader}>
-          <Text style={styles.companyName}>{slipData.companyData?.company_name || 'Owner Inventory'}</Text>
-          <Text style={styles.thermalText}>{slipData.companyData?.lead_street || slipData.companyData?.street || ''}</Text>
-          <Text style={styles.thermalText}>{slipData.companyData?.lead_contact || slipData.companyData?.mobile || ''}</Text>
-          <View style={styles.divider} />
-          <Text style={styles.title}>RAW BILL / TICKET</Text>
-          <View style={styles.divider} />
-        </View>
+        <View style={styles.headerInfo}>
+          <View style={styles.headerRow}>
+            <Text style={[styles.companyName, { fontSize: scaleFont(24) }]}>{slipData.companyData?.company_name || ''}</Text>
+            <Text style={[styles.customerName, { fontSize: scaleFont(24) }]}>{customerName}</Text>
+          </View>
+          
+          <View style={styles.headerRow}>
+            <Text style={[styles.subInfo, { fontSize: scaleFont(15) }]}>
+              {slipData.companyData?.lead_street || ''} {slipData.companyData?.lead_country || ''}
+            </Text>
+            <Text style={[styles.subInfo, { fontSize: scaleFont(15) }]}>Customer Id: {slipData.customerData?.id || slipData.usersData?.customer_id || ''}</Text>
+          </View>
 
-        {/* Info Rows */}
-        <View style={styles.infoSection}>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Date:</Text>
-            <Text style={styles.infoValue}>{slipData.saleData?.created_at ? TRANSFORM_DATE_TIME_TO_STRING(new Date(slipData.saleData.created_at), true) : ''}</Text>
+          <View style={styles.headerRow}>
+            <Text style={[styles.subInfo, { fontSize: scaleFont(15), fontWeight: '500' }]}>{slipData.companyData?.lead_contact || ''}</Text>
+            {salesmanName !== 'N/A' && (
+              <Text style={[styles.subInfo, { fontSize: scaleFont(15) }]}>Salesman: {salesmanName}</Text>
+            )}
           </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Ticket No:</Text>
-            <Text style={styles.infoValue}>{slipData.saleData?.ticket_no || slipData.saleData?.invoice_no || 'N/A'}</Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Customer:</Text>
-            <Text style={styles.infoValue}>{customerName}</Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Cashier:</Text>
-            <Text style={styles.infoValue}>{cashierName}</Text>
-          </View>
-        </View>
 
-        {/* Product Table */}
-        <View style={styles.tableHeader}>
-          <Text style={[styles.tableHeaderText, { flex: 1.5 }]}>SKU</Text>
-          <Text style={[styles.tableHeaderText, { flex: 3 }]}>Item</Text>
-          <Text style={[styles.tableHeaderText, { flex: 1, textAlign: 'center' }]}>Qty</Text>
-          <Text style={[styles.tableHeaderText, { flex: 1.5, textAlign: 'right' }]}>Price</Text>
-          <Text style={[styles.tableHeaderText, { flex: 1.5, textAlign: 'right' }]}>Total</Text>
-        </View>
-        <View style={styles.dividerMinimal} />
-
-        {(slipData.saleItemsData || []).map((item: any, index: number) => renderProductRow(item, index))}
-
-        <View style={styles.divider} />
-
-        {/* Totals */}
-        <View style={styles.totalsContainer}>
-          <View style={styles.totalRow}>
-            <Text style={styles.totalLabel}>Sub-Total</Text>
-            <Text style={styles.totalValue}>{slipData.saleData?.actual_bill || 0}</Text>
-          </View>
-          <View style={styles.totalRow}>
-            <Text style={styles.totalLabel}>Discount</Text>
-            <Text style={styles.totalValue}>{slipData.saleData?.total_discount || 0}</Text>
-          </View>
-          <View style={styles.totalRow}>
-            <Text style={styles.totalLabel}>Tax</Text>
-            <Text style={styles.totalValue}>{slipData.saleData?.total_tax || 0}</Text>
-          </View>
-          <View style={[styles.totalRow, { marginTop: 5 }]}>
-            <Text style={styles.grandTotalLabel}>GRAND TOTAL</Text>
-            <Text style={styles.grandTotalValue}>{slipData.saleData?.total_bill || 0}</Text>
+          <View style={{ alignItems: 'flex-end', marginTop: 10 }}>
+            <Text style={[styles.dateText, { fontSize: scaleFont(15) }]}>
+              Date: {slipData.saleData?.created_at || TRANSFORM_DATE_TIME_TO_STRING(new Date(), true)}
+            </Text>
           </View>
         </View>
 
-        {/* Footer Note */}
-        <View style={styles.footerNoteContainer}>
-          <Text style={styles.footerNote}>*** RAW BILL PRINT ONLY ***</Text>
-          <Text style={styles.footerNoteMinimal}>No sale has been made against this bill</Text>
+        {/* Sales Person Banner */}
+        <View style={styles.banner}>
+          <Text style={styles.bannerText}>
+            Sale Person: <Text style={{ fontWeight: '700' }}>{cashierName}</Text>
+          </Text>
+          <Text style={styles.bannerText}>
+            Issued at: <Text style={{ fontWeight: '700' }}>{slipData.saleData?.created_at ? TRANSFORM_DATE_TIME_TO_STRING(new Date(slipData.saleData.created_at), true) : ''}</Text>
+          </Text>
         </View>
 
-        {/* Actions - Print and Share aligned with Flutter */}
-        <View style={styles.actions}>
-          <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
-            <Text style={styles.closeBtnText}>Close</Text>
-          </TouchableOpacity>
-          <View style={{ flexDirection: 'row' }}>
-            <TouchableOpacity style={styles.shareBtn} onPress={handleShare}>
-              <Text style={styles.shareBtnText}>Share</Text>
+        {/* Table */}
+        <View style={styles.tableContainer}>
+          <View style={styles.tableHeader}>
+            <Text style={[styles.tableHeaderText, { flex: 1.5 }]}>SKU</Text>
+            <Text style={[styles.tableHeaderText, { flex: 3 }]}>Product</Text>
+            <Text style={[styles.tableHeaderText, { flex: 1, textAlign: 'center' }]}>Qty</Text>
+            <Text style={[styles.tableHeaderText, { flex: 1.5, textAlign: 'center' }]}>Price</Text>
+            <Text style={[styles.tableHeaderText, { flex: 1, textAlign: 'center' }]}>Disc</Text>
+            <Text style={[styles.tableHeaderText, { flex: 1.5, textAlign: 'right' }]}>Sub-Total</Text>
+          </View>
+          {(slipData.products || slipData.saleItemsData || []).map((item: any, index: number) => renderProductRow(item, index))}
+          
+          {/* Total Row */}
+          <View style={styles.totalSummaryRow}>
+            <View style={{ flex: 7 }} />
+            <Text style={[styles.totalSummaryCell, { flex: 1.5, fontWeight: '700' }]}>Total</Text>
+            <Text style={[styles.totalSummaryCell, { flex: 1.5, textAlign: 'right', fontWeight: '700' }]}>{slipData.saleData?.actual_bill || 0}</Text>
+          </View>
+          
+          <View style={styles.totalSummaryRow}>
+            <View style={{ flex: 7 }} />
+            <Text style={[styles.totalSummaryCell, { flex: 1.5, fontWeight: '700' }]}>GST (18%)</Text>
+            <Text style={[styles.totalSummaryCell, { flex: 1.5, textAlign: 'right', fontWeight: '700' }]}>{slipData.saleData?.total_tax || 0}</Text>
+          </View>
+        </View>
+
+        {/* Warning Note */}
+        <Text style={styles.warningNote}>
+          Note: Raw Bill Print Only. No sale has made against this bill
+        </Text>
+
+        {/* Footer Actions */}
+        <View style={styles.footer}>
+          <View style={styles.footerButtons}>
+            <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
+              <Text style={styles.btnText}>Close</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.printBtn} onPress={handlePrint}>
-              <Text style={styles.printBtnText}>Print</Text>
+            
+            <TouchableOpacity style={styles.ticketBtn} onPress={handleTicket} disabled={isLoading}>
+              {isLoading ? <ActivityIndicator color="white" size="small" /> : <Text style={styles.btnText}>Ticket</Text>}
             </TouchableOpacity>
+          </View>
+
+          <View style={styles.totalSection}>
+            <Text style={styles.totalLabel}>Grand Total </Text>
+            <Text style={styles.totalValue}>{slipData.saleData?.total_bill || 0}</Text>
           </View>
         </View>
 
@@ -218,177 +167,147 @@ export default function RawBillPrintDialog({ slipData, onClose }: RawBillPrintDi
 
 const styles = StyleSheet.create({
   dialogCard: {
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    padding: 15,
-    alignSelf: 'center',
-    elevation: 10,
+    backgroundColor: '#ebebeb',
+    borderRadius: 15,
+    padding: 30,
+    elevation: 20,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.3,
-    shadowRadius: 5,
+    shadowRadius: 20,
   },
   scrollContent: {
-    paddingBottom: 10,
+    paddingBottom: 20,
   },
-  thermalHeader: {
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  companyName: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#000',
-    textAlign: 'center',
-  },
-  thermalText: {
-    fontSize: 12,
-    color: '#333',
-    textAlign: 'center',
-  },
-  title: {
-    fontSize: 16,
+  mainTitle: {
+    color: COLORS.primary,
     fontWeight: '700',
-    color: '#000',
-    marginVertical: 5,
+    textAlign: 'center',
+    marginBottom: 20,
+    fontFamily: 'Montserrat-Bold',
   },
-  divider: {
-    height: 1,
-    backgroundColor: '#000',
-    width: '100%',
-    marginVertical: 10,
-    borderStyle: 'dashed',
-    borderWidth: 1,
-    borderRadius: 1,
-  },
-  dividerMinimal: {
-    height: 1,
-    backgroundColor: '#eee',
-    width: '100%',
-    marginVertical: 5,
-  },
-  infoSection: {
+  headerInfo: {
     marginBottom: 15,
   },
-  infoRow: {
+  headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 4,
+    marginBottom: 5,
   },
-  infoLabel: {
-    fontSize: 12,
-    color: '#666',
-    fontWeight: '600',
-  },
-  infoValue: {
-    fontSize: 12,
-    color: '#000',
+  companyName: {
     fontWeight: '700',
+    color: '#334155',
+  },
+  customerName: {
+    fontWeight: '700',
+    color: '#334155',
+  },
+  subInfo: {
+    color: '#475569',
+  },
+  dateText: {
+    fontWeight: '500',
+    color: '#334155',
+  },
+  banner: {
+    backgroundColor: COLORS.primary,
+    borderRadius: 5,
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 15,
+  },
+  bannerText: {
+    color: 'white',
+    fontSize: 14,
+  },
+  tableContainer: {
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+    borderRadius: 15,
+    padding: 15,
+    backgroundColor: 'white',
+    marginBottom: 15,
   },
   tableHeader: {
     flexDirection: 'row',
-    paddingBottom: 5,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.primary,
+    paddingBottom: 10,
+    marginBottom: 10,
   },
   tableHeaderText: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: '#000',
+    fontWeight: '700',
+    color: COLORS.primary,
+    fontSize: 14,
   },
   tableRow: {
     flexDirection: 'row',
-    paddingVertical: 4,
+    paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#f2f2f2',
+    borderBottomColor: '#f1f5f9',
   },
   tableCell: {
-    fontSize: 11,
-    color: '#000',
+    color: '#64748b',
   },
-  cellBold: {
-    fontWeight: '600',
-  },
-  totalsContainer: {
-    alignItems: 'flex-end',
-    marginBottom: 15,
-  },
-  totalRow: {
+  totalSummaryRow: {
     flexDirection: 'row',
-    width: '60%',
-    justifyContent: 'space-between',
-    marginBottom: 2,
+    paddingVertical: 5,
   },
-  totalLabel: {
-    fontSize: 12,
-    color: '#444',
+  totalSummaryCell: {
+    color: '#334155',
   },
-  totalValue: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#000',
-  },
-  grandTotalLabel: {
-    fontSize: 15,
-    fontWeight: '900',
-    color: '#000',
-  },
-  grandTotalValue: {
-    fontSize: 15,
-    fontWeight: '900',
-    color: COLORS.primary,
-  },
-  footerNoteContainer: {
-    alignItems: 'center',
+  warningNote: {
+    color: COLORS.posRed,
+    fontSize: 14,
+    fontWeight: '400',
     marginBottom: 20,
+  },
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginTop: 10,
   },
-  footerNote: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: COLORS.danger,
-    textAlign: 'center',
-  },
-  footerNoteMinimal: {
-    fontSize: 10,
-    color: '#666',
-    textAlign: 'center',
-    marginTop: 2,
-  },
-  actions: {
+  footerButtons: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
+    gap: 10,
   },
   closeBtn: {
-    backgroundColor: '#f1f1f1',
+    backgroundColor: COLORS.posRed,
     paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 4,
+    paddingHorizontal: 25,
+    borderRadius: 5,
   },
-  closeBtnText: {
-    color: '#333',
-    fontWeight: '700',
-  },
-  printBtn: {
+  ticketBtn: {
     backgroundColor: COLORS.primary,
     paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 4,
+    paddingHorizontal: 25,
+    borderRadius: 5,
+    minWidth: 100,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  printBtnText: {
-    color: '#fff',
+  btnText: {
+    color: 'white',
+    fontWeight: '500',
+    fontSize: 15,
+  },
+  totalSection: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+  },
+  totalLabel: {
+    fontSize: 18,
+    color: '#334155',
+  },
+  totalValue: {
+    fontSize: 28,
     fontWeight: '700',
+    color: COLORS.primary,
   },
-  shareBtn: {
-    backgroundColor: '#4A5568',
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 4,
-    marginRight: 10,
-  },
-  shareBtnText: {
-    color: '#fff',
+  cellBold: {
     fontWeight: '700',
   },
 });

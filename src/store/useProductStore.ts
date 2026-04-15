@@ -15,10 +15,11 @@ interface ProductState {
 
   // Pagination
   nextPageUrl: string | null;
+  prevPageUrl: string | null;
   currentPage: number;
 
   // Actions
-  fetchProducts: (catId?: string | number, isLoadMore?: boolean) => Promise<void>;
+  fetchProducts: (catId?: string | number, isLoadMore?: boolean, pageNumber?: number) => Promise<void>;
   fetchCategories: () => Promise<void>;
   setSearchQuery: (query: string) => void;
   setCategory: (name: string) => void;
@@ -35,9 +36,10 @@ export const useProductStore = create<ProductState>((set, get) => ({
   searchQuery: '',
   selectedCategoryName: 'All Categories',
   nextPageUrl: null,
+  prevPageUrl: null,
   currentPage: 1,
 
-  fetchProducts: async (catId = 'all', isLoadMore = false) => {
+  fetchProducts: async (catId = 'all', isLoadMore = false, pageNumber) => {
     const { currentPage, nextPageUrl, isLoading, searchQuery } = get();
 
     if (isLoading) return;
@@ -51,12 +53,13 @@ export const useProductStore = create<ProductState>((set, get) => ({
 
       const storeId = authStore.currentStore?.store_id;
 
-      const pageToFetch = isLoadMore ? currentPage + 1 : 1;
+      const pageToFetch = pageNumber || (isLoadMore ? currentPage + 1 : 1);
 
+      console.log("Store Id of the user ", storeId)
       const response = await axiosClient.get(API_ENDPOINTS.POS.PRODUCTS, {
         params: {
           page: pageToFetch,
-          store_id: storeId,
+          store_id: storeId || 1,
           cat_id: catId === 'all' ? null : catId,
           keyword: searchQuery || null,
         }
@@ -64,12 +67,14 @@ export const useProductStore = create<ProductState>((set, get) => ({
 
       if (response.data?.success || response.status === 200) {
         const responseData = response.data;
-        const newProducts = responseData.data?.Products || [];
+        // API response has 'products' inside 'data'
+        const newProducts = responseData.data?.products || responseData.data?.Products || [];
         const links = responseData.links;
 
         set({
           listOfProducts: isLoadMore ? [...get().listOfProducts, ...newProducts] : newProducts,
           nextPageUrl: links?.next || null,
+          prevPageUrl: links?.prev || null,
           currentPage: pageToFetch,
           isLoading: false
         });

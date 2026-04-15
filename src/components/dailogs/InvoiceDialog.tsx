@@ -1,8 +1,10 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, useWindowDimensions, FlatList } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, useWindowDimensions, ActivityIndicator } from 'react-native';
 import { COLORS } from '../../constants/colors';
 import { BaseSlipData } from '../../store/useDialogStore';
 import { TRANSFORM_DATE_TIME_TO_STRING } from '../../utils/helpers';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
 
 interface InvoiceDialogProps {
   slipData: BaseSlipData;
@@ -11,157 +13,201 @@ interface InvoiceDialogProps {
 
 export default function InvoiceDialog({ slipData, onClose }: InvoiceDialogProps) {
   const { width, height } = useWindowDimensions();
-  const isPortrait = height > width;
 
-  const handlePrint = () => {
-    // Printing to be implemented later or via a separate print service
-    console.log('Print invoice functionality to be implemented');
+  // Responsive breakpoints
+  const isTablet = width >= 768;
+  const isMobile = !isTablet;
+
+  // Dynamic values
+  const dialogWidth = isTablet ? 900 : width * 0.95;
+  const dialogMaxHeight = height * 0.9;
+
+  const scaleFont = (size: number) => {
+    const scale = isTablet ? 1.2 : 1;
+    return size * scale;
+  };
+
+  const generateHTML = () => {
+    const productsHTML = (slipData.saleItemsData || []).map((item: any) => `
+      <tr>
+        <td style="padding: 10px; border-bottom: 1px solid #E2E8F0;">${item.sku || ''}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #E2E8F0;">${item.name || item.product_name || ''}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #E2E8F0; text-align: center;">${item.qty || 0}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #E2E8F0; text-align: center;">${item.price || item.selling_price || 0}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #E2E8F0; text-align: center;">${item.discount || 0}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #E2E8F0; text-align: right;">${item.subtotal || 0}</td>
+      </tr>
+    `).join('');
+
+    return `
+      <html>
+        <body style="font-family: Arial, sans-serif; padding: 40px; color: #1E293B;">
+          <div style="text-align: center; margin-bottom: 20px;">
+            <h1 style="margin: 0; color: ${COLORS.primary}; text-transform: uppercase;">Sale Invoice</h1>
+          </div>
+          <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+            <div>
+              <h2 style="margin: 0;">${slipData.companyData?.company_name || 'Owner Inventory'}</h2>
+              <p style="margin: 5px 0; font-size: 14px;">${slipData.companyData?.lead_street || ''}</p>
+              <p style="margin: 5px 0; font-size: 14px;">${slipData.companyData?.lead_contact || ''}</p>
+            </div>
+            <div style="text-align: right;">
+              <h2 style="margin: 0; color: ${COLORS.primary};">Bill To:</h2>
+              <p style="margin: 5px 0; font-size: 16px;"><b>${customerName}</b></p>
+              <p style="margin: 5px 0; font-size: 14px;">ID: ${slipData.customerData?.id || ''}</p>
+            </div>
+          </div>
+          <p style="margin: 5px 0; font-size: 14px;"><b>Invoice No: ${slipData.saleData?.invoice_no || 'N/A'}</b></p>
+          <p style="margin: 5px 0; font-size: 14px;">Date: ${slipData.saleData?.created_at || TRANSFORM_DATE_TIME_TO_STRING(new Date(), true)}</p>
+          <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+            <thead>
+              <tr style="background-color: #F8FAFC; color: ${COLORS.primary};">
+                <th style="padding: 12px; text-align: left; border-bottom: 2px solid ${COLORS.primary};">SKU</th>
+                <th style="padding: 12px; text-align: left; border-bottom: 2px solid ${COLORS.primary};">Product</th>
+                <th style="padding: 12px; text-align: center; border-bottom: 2px solid ${COLORS.primary};">Qty</th>
+                <th style="padding: 12px; text-align: center; border-bottom: 2px solid ${COLORS.primary};">Price</th>
+                <th style="padding: 12px; text-align: center; border-bottom: 2px solid ${COLORS.primary};">Disc</th>
+                <th style="padding: 12px; text-align: right; border-bottom: 2px solid ${COLORS.primary};">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${productsHTML}
+            </tbody>
+          </table>
+          <div style="display: flex; justify-content: flex-end; margin-top: 20px;">
+            <div style="width: 250px;">
+              <p style="display: flex; justify-content: space-between; margin: 5px 0;"><span>Sub-Total:</span> <span>${slipData.saleData?.actual_bill || 0}</span></p>
+              <p style="display: flex; justify-content: space-between; margin: 5px 0;"><span>Discount:</span> <span>${slipData.saleData?.total_discount || 0}</span></p>
+              <p style="display: flex; justify-content: space-between; margin: 5px 0;"><span>GST (18%):</span> <span>${slipData.saleData?.total_tax || 0}</span></p>
+              <h2 style="display: flex; justify-content: space-between; margin-top: 10px; padding-top: 10px; border-top: 2px solid ${COLORS.primary}; color: ${COLORS.primary};">
+                <span>Total:</span> <span>${slipData.saleData?.total_bill || 0}</span>
+              </h2>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+  };
+
+  const handlePrint = async () => {
+    try {
+      await Print.printAsync({ html: generateHTML() });
+    } catch (error) {
+      console.error('Print Error:', error);
+    }
+  };
+
+  const handleShare = async () => {
+    try {
+      const { uri } = await Print.printToFileAsync({ html: generateHTML() });
+      await Sharing.shareAsync(uri);
+    } catch (error) {
+      console.error('Share Error:', error);
+    }
   };
 
   const renderProductRow = (item: any, index: number) => (
     <View key={index} style={styles.tableRow}>
-      <Text style={[styles.tableCell, { flex: 1.5 }]}>{item.product?.sku || item.sku || item.barcode || ''}</Text>
-      <Text style={[styles.tableCell, { flex: 3 }]} numberOfLines={1}>
-        {item.product?.product_name || item.product_name || item.product?.name || item.name || ''}
-      </Text>
-      <Text style={[styles.tableCell, styles.cellBold]}>{item.qty || item.quantity || 0}</Text>
-      <Text style={[styles.tableCell, styles.cellBold]}>{item.price || item.actual_price || item.selling_price || item.unit_price || 0}</Text>
-      <Text style={[styles.tableCell, styles.cellBold]}>{item.discount || 0}</Text>
-      <Text style={[styles.tableCell, styles.cellBold, { textAlign: 'right' }]}>{item.subtotal || 0}</Text>
+      <Text style={[styles.tableCell, { flex: 1.5, fontSize: scaleFont(12) }]}>{item.sku || ''}</Text>
+      <Text style={[styles.tableCell, { flex: 3, fontSize: scaleFont(12) }]}>{item.name || item.product_name || ''}</Text>
+      <Text style={[styles.tableCell, { flex: 1, textAlign: 'center', fontSize: scaleFont(12) }]}>{item.qty || 0}</Text>
+      <Text style={[styles.tableCell, { flex: 1.5, textAlign: 'center', fontSize: scaleFont(12) }]}>{item.selling_price || item.price || 0}</Text>
+      <Text style={[styles.tableCell, { flex: 1, textAlign: 'center', fontSize: scaleFont(12) }]}>{item.discount || 0}</Text>
+      <Text style={[styles.tableCell, styles.cellBold, { flex: 1.5, textAlign: 'right', fontSize: scaleFont(12) }]}>{item.subtotal || 0}</Text>
     </View>
   );
 
-  const customerName = slipData.customerData?.name ||
-    (slipData.customerData?.first_name ? `${slipData.customerData.first_name} ${slipData.customerData.last_name || ''}` : 'N/A');
-
-  const salesmanName = slipData.salesmanData?.name ||
-    (slipData.salesmanData?.first_name ? `${slipData.salesmanData.first_name} ${slipData.salesmanData.last_name || ''}` : 'N/A');
+  const customerName = slipData.customerData?.name || slipData.usersData?.customer_name || 'N/A';
+  const cashierName = slipData.cashierData?.name || slipData.usersData?.sale_person || 'N/A';
 
   return (
-    <View style={[styles.dialogCard, { width: isPortrait ? '95%' : 910, maxHeight: isPortrait ? height * 0.9 : 700 }]}>
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+    <View style={[styles.dialogCard, { width: dialogWidth, maxHeight: dialogMaxHeight }]}>
+      <ScrollView showsVerticalScrollIndicator={true} contentContainerStyle={styles.scrollContent}>
+        
+        {/* Purple Header Title */}
+        <Text style={[styles.mainTitle, { fontSize: scaleFont(30) }]}>Sale Invoice</Text>
 
-        {/* Title */}
-        <Text style={styles.title}>Sale Invoice</Text>
-
-        {/* Header Information */}
-        <View style={styles.headerBlock}>
+        <View style={styles.headerInfo}>
           <View style={styles.headerRow}>
-            <Text style={styles.companyName} numberOfLines={1}>{slipData.companyData?.company_name || 'Owner Inventory'}</Text>
-            <Text style={styles.issuedAt}>
-              <Text style={{ fontWeight: '400' }}>Issued at: </Text>
-              {slipData.saleData?.created_at ? TRANSFORM_DATE_TIME_TO_STRING(new Date(slipData.saleData.created_at), true) : ''}
+            <Text style={[styles.companyName, { fontSize: scaleFont(24) }]}>{slipData.companyData?.company_name || ''}</Text>
+            <Text style={[styles.customerName, { fontSize: scaleFont(24) }]}>{customerName}</Text>
+          </View>
+          
+          <View style={styles.headerRow}>
+            <Text style={[styles.subInfo, { fontSize: scaleFont(15) }]}>
+              {slipData.companyData?.lead_street || ''} {slipData.companyData?.lead_country || ''}
             </Text>
+            <Text style={[styles.subInfo, { fontSize: scaleFont(15) }]}>Customer Id: {slipData.customerData?.id || slipData.usersData?.customer_id || ''}</Text>
           </View>
 
           <View style={styles.headerRow}>
-            <Text style={styles.companyAddress} numberOfLines={1}>
-              {slipData.companyData?.lead_street || slipData.companyData?.street || ''} {slipData.companyData?.lead_city || slipData.companyData?.city || ''}
+            <Text style={[styles.subInfo, { fontSize: scaleFont(15), fontWeight: '500' }]}>{slipData.companyData?.lead_contact || ''}</Text>
+            <Text style={[styles.subInfo, { fontSize: scaleFont(15) }]}>Invoice No: {slipData.saleData?.invoice_no || 'N/A'}</Text>
+          </View>
+
+          <View style={{ alignItems: 'flex-end', marginTop: 10 }}>
+            <Text style={[styles.dateText, { fontSize: scaleFont(15) }]}>
+              Date: {slipData.saleData?.created_at || TRANSFORM_DATE_TIME_TO_STRING(new Date(), true)}
             </Text>
-            <Text style={styles.billTo}>Bill to: </Text>
-          </View>
-
-          <View style={styles.headerRow}>
-            <Text style={styles.companyContact}>{slipData.companyData?.lead_contact || slipData.companyData?.mobile || 'N/A'}</Text>
-            <View style={{ alignItems: 'flex-end', flex: 1.5 }}>
-              <Text style={styles.customerAddress} numberOfLines={1}>
-                Address: {slipData.customerData?.company_street || slipData.customerData?.street || ''} {slipData.customerData?.company_city || slipData.customerData?.city || ''}
-              </Text>
-              <Text style={styles.customerText} numberOfLines={1}>
-                Name: {customerName}
-              </Text>
-              <Text style={styles.customerText}>ID: {slipData.customerData?.customer_id || slipData.customerData?.id || 'N/A'}</Text>
-            </View>
-          </View>
-
-          <View style={styles.headerRow}>
-            <View />
-            <View style={{ alignItems: 'flex-end' }}>
-              <Text style={styles.customerText} numberOfLines={1}>Salesman: {salesmanName}</Text>
-              <Text style={styles.customerText}>Salesman ID: {slipData.salesmanData?.user_id || slipData.salesmanData?.id || 'N/A'}</Text>
-            </View>
           </View>
         </View>
 
-        {/* Invoice Banner Info */}
-        <View style={styles.infoBanner}>
-          <Text style={styles.infoBannerText}>
-            <Text style={{ fontWeight: '400' }}>Invoice No: </Text>
-            {slipData.saleData?.invoice_no || 'N/A'}
+        {/* Banner */}
+        <View style={styles.banner}>
+          <Text style={styles.bannerText}>
+            Cashier: <Text style={{ fontWeight: '700' }}>{cashierName}</Text>
           </Text>
-          <Text style={styles.infoBannerText}>
-            <Text style={{ fontWeight: '400' }}>Cashier: </Text>
-            {slipData.cashierData?.name || slipData.cashierData?.first_name || 'N/A'}
-          </Text>
-          <Text style={styles.infoBannerText}>
-            <Text style={{ fontWeight: '400' }}>Status: </Text>
-            {slipData.saleData?.status || slipData.saleData?.payment_status || ''}
+          <Text style={styles.bannerText}>
+            Status: <Text style={{ fontWeight: '700' }}>{slipData.saleData?.status || 'Paid'}</Text>
           </Text>
         </View>
 
-        {/* Product Table */}
+        {/* Table */}
         <View style={styles.tableContainer}>
           <View style={styles.tableHeader}>
             <Text style={[styles.tableHeaderText, { flex: 1.5 }]}>SKU</Text>
             <Text style={[styles.tableHeaderText, { flex: 3 }]}>Product</Text>
-            <Text style={[styles.tableHeaderText, { textAlign: 'center' }]}>Qty</Text>
-            <Text style={[styles.tableHeaderText, { textAlign: 'center' }]}>Price</Text>
-            <Text style={[styles.tableHeaderText, { textAlign: 'center' }]}>Disc</Text>
-            <Text style={[styles.tableHeaderText, { textAlign: 'right' }]}>Total</Text>
+            <Text style={[styles.tableHeaderText, { flex: 1, textAlign: 'center' }]}>Qty</Text>
+            <Text style={[styles.tableHeaderText, { flex: 1.5, textAlign: 'center' }]}>Price</Text>
+            <Text style={[styles.tableHeaderText, { flex: 1, textAlign: 'center' }]}>Disc</Text>
+            <Text style={[styles.tableHeaderText, { flex: 1.5, textAlign: 'right' }]}>Total</Text>
           </View>
-
-          {(slipData.saleItemsData || []).map((item, index) => renderProductRow(item, index))}
-
-          {/* Footer Rows */}
-          <View style={styles.tableFooterRow}>
-            <Text style={{ flex: 6.5 }}></Text>
-            <Text style={[styles.tableCell, styles.cellBold]}>Discount</Text>
-            <Text style={[styles.tableCell, styles.cellBold, { textAlign: 'right' }]}>{slipData.saleData?.total_discount || 0}</Text>
+          {(slipData.saleItemsData || []).map((item: any, index: number) => renderProductRow(item, index))}
+          
+          {/* Total Row */}
+          <View style={styles.totalSummaryRow}>
+            <View style={{ flex: 7 }} />
+            <Text style={[styles.totalSummaryCell, { flex: 1.5, fontWeight: '700' }]}>Sub-Total</Text>
+            <Text style={[styles.totalSummaryCell, { flex: 1.5, textAlign: 'right', fontWeight: '700' }]}>{slipData.saleData?.actual_bill || 0}</Text>
           </View>
-          <View style={styles.tableFooterRow}>
-            <Text style={{ flex: 6.5 }}></Text>
-            <Text style={[styles.tableCell, styles.cellBold]}>Sub-Total</Text>
-            <Text style={[styles.tableCell, styles.cellBold, { textAlign: 'right' }]}>{slipData.saleData?.actual_bill || slipData.saleData?.amount_paid || 0}</Text>
-          </View>
-          <View style={styles.tableFooterRow}>
-            <Text style={{ flex: 6.5 }}></Text>
-            <Text style={[styles.tableCell, styles.cellBold]}>Tax</Text>
-            <Text style={[styles.tableCell, styles.cellBold, { textAlign: 'right' }]}>{slipData.saleData?.total_tax || 0}</Text>
+          
+          <View style={styles.totalSummaryRow}>
+            <View style={{ flex: 7 }} />
+            <Text style={[styles.totalSummaryCell, { flex: 1.5, fontWeight: '700' }]}>GST (18%)</Text>
+            <Text style={[styles.totalSummaryCell, { flex: 1.5, textAlign: 'right', fontWeight: '700' }]}>{slipData.saleData?.total_tax || 0}</Text>
           </View>
         </View>
 
-        {/* Totals Section */}
-        <View style={styles.totalsContainer}>
-          <Text style={styles.totalsText}>
-            <Text style={{ fontWeight: '400', color: COLORS.textDark, fontSize: 16 }}>Total: </Text>
-            {slipData.saleData?.total_bill || 0}
-          </Text>
-          <Text style={styles.totalsText}>
-            <Text style={{ fontWeight: '400', color: COLORS.textDark, fontSize: 16 }}>Paid: </Text>
-            {slipData.saleData?.amount_paid || 0}
-          </Text>
-          <Text style={styles.totalsText}>
-            <Text style={{ fontWeight: '400', color: COLORS.textDark, fontSize: 16 }}>Balance: </Text>
-            {slipData.saleData?.balance || 0}
-          </Text>
-        </View>
+        {/* Footer Actions */}
+        <View style={styles.footer}>
+          <View style={styles.footerButtons}>
+            <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
+              <Text style={styles.btnText}>Close</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity style={styles.shareBtn} onPress={handleShare}>
+              <Text style={styles.btnText}>Share</Text>
+            </TouchableOpacity>
 
-        {/* Notes */}
-        {slipData.saleData?.notes && (
-          <View style={styles.notesContainer}>
-            <Text style={styles.notesLabel}>Notes</Text>
-            <Text style={styles.notesText}>{slipData.saleData.notes}</Text>
+            <TouchableOpacity style={styles.printBtn} onPress={handlePrint}>
+              <Text style={styles.btnText}>Print</Text>
+            </TouchableOpacity>
           </View>
-        )}
 
-        {/* Actions */}
-        <View style={styles.actions}>
-          <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
-            <Text style={styles.closeBtnText}>Close</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.printBtn} onPress={handlePrint}>
-            <Text style={styles.printBtnText}>Print Invoice</Text>
-          </TouchableOpacity>
+          <View style={styles.totalSection}>
+            <Text style={styles.totalLabel}>Grand Total </Text>
+            <Text style={styles.totalValue}>{slipData.saleData?.total_bill || 0}</Text>
+          </View>
         </View>
 
       </ScrollView>
@@ -171,168 +217,144 @@ export default function InvoiceDialog({ slipData, onClose }: InvoiceDialogProps)
 
 const styles = StyleSheet.create({
   dialogCard: {
-    backgroundColor: '#fff',
+    backgroundColor: '#ebebeb',
     borderRadius: 15,
-    padding: 20,
-    alignSelf: 'center',
-    elevation: 5,
+    padding: 30,
+    elevation: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
   },
   scrollContent: {
     paddingBottom: 20,
   },
-  title: {
-    fontSize: 22,
-    fontWeight: '700',
+  mainTitle: {
     color: COLORS.primary,
-    marginBottom: 20,
+    fontWeight: '700',
     textAlign: 'center',
+    marginBottom: 20,
+    fontFamily: 'Montserrat-Bold',
   },
-  headerBlock: {
+  headerInfo: {
     marginBottom: 15,
   },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    marginBottom: 5,
   },
   companyName: {
-    fontSize: 20,
     fontWeight: '700',
-    color: COLORS.textDark,
-    flex: 1,
+    color: '#334155',
   },
-  companyAddress: {
-    fontSize: 14,
-    color: COLORS.textDark,
-    flex: 1,
-  },
-  companyContact: {
-    fontSize: 14,
-    color: COLORS.textDark,
-  },
-  issuedAt: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.textDark,
-  },
-  billTo: {
-    fontSize: 14,
+  customerName: {
     fontWeight: '700',
-    color: COLORS.primary,
+    color: '#334155',
   },
-  customerAddress: {
-    fontSize: 13,
-    color: COLORS.textDark,
-    textAlign: 'right',
+  subInfo: {
+    color: '#475569',
   },
-  customerText: {
-    fontSize: 13,
-    color: COLORS.textDark,
-    textAlign: 'right',
+  dateText: {
+    fontWeight: '500',
+    color: '#334155',
   },
-  infoBanner: {
+  banner: {
     backgroundColor: COLORS.primary,
-    borderRadius: 8,
+    borderRadius: 5,
+    paddingVertical: 10,
+    paddingHorizontal: 15,
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingVertical: 12,
-    marginBottom: 20,
+    justifyContent: 'space-between',
+    marginBottom: 15,
   },
-  infoBannerText: {
-    color: COLORS.white,
-    fontSize: 12,
-    fontWeight: '600',
+  bannerText: {
+    color: 'white',
+    fontSize: 14,
   },
   tableContainer: {
     borderWidth: 1,
-    borderColor: '#eee',
-    borderRadius: 12,
-    padding: 10,
-    marginBottom: 20,
+    borderColor: COLORS.primary,
+    borderRadius: 15,
+    padding: 15,
+    backgroundColor: 'white',
+    marginBottom: 15,
   },
   tableHeader: {
     flexDirection: 'row',
-    paddingBottom: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-    marginBottom: 8,
+    borderBottomColor: COLORS.primary,
+    paddingBottom: 10,
+    marginBottom: 10,
   },
   tableHeaderText: {
-    flex: 1,
-    fontSize: 14,
     fontWeight: '700',
     color: COLORS.primary,
+    fontSize: 14,
   },
   tableRow: {
     flexDirection: 'row',
-    paddingVertical: 6,
+    paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#f9f9f9',
-  },
-  tableFooterRow: {
-    flexDirection: 'row',
-    paddingVertical: 4,
+    borderBottomColor: '#f1f5f9',
   },
   tableCell: {
-    flex: 1,
-    fontSize: 13,
-    color: '#444',
+    color: '#64748b',
   },
-  cellBold: {
-    fontWeight: '600',
+  totalSummaryRow: {
+    flexDirection: 'row',
+    paddingVertical: 5,
   },
-  totalsContainer: {
-    alignItems: 'flex-end',
-    marginBottom: 20,
-    paddingRight: 10,
+  totalSummaryCell: {
+    color: '#334155',
   },
-  totalsText: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: COLORS.primary,
-    marginBottom: 4,
-  },
-  notesContainer: {
-    backgroundColor: '#f8f9fa',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 20,
-  },
-  notesLabel: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#666',
-    marginBottom: 4,
-  },
-  notesText: {
-    fontSize: 13,
-    color: '#444',
-  },
-  actions: {
+  footer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
     marginTop: 10,
   },
-  closeBtn: {
-    backgroundColor: '#eee',
-    paddingVertical: 12,
-    paddingHorizontal: 25,
-    borderRadius: 8,
+  footerButtons: {
+    flexDirection: 'row',
+    gap: 10,
   },
-  closeBtnText: {
-    color: '#333',
-    fontSize: 15,
-    fontWeight: '600',
+  closeBtn: {
+    backgroundColor: COLORS.posRed,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 5,
+  },
+  shareBtn: {
+    backgroundColor: '#475569',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 5,
   },
   printBtn: {
     backgroundColor: COLORS.primary,
-    paddingVertical: 12,
-    paddingHorizontal: 25,
-    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 5,
   },
-  printBtnText: {
-    color: COLORS.white,
+  btnText: {
+    color: 'white',
+    fontWeight: '500',
     fontSize: 15,
-    fontWeight: '600',
+  },
+  totalSection: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+  },
+  totalLabel: {
+    fontSize: 18,
+    color: '#334155',
+  },
+  totalValue: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: COLORS.primary,
+  },
+  cellBold: {
+    fontWeight: '700',
   },
 });

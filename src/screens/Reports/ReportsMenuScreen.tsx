@@ -8,10 +8,12 @@ import {
   Dimensions,
   Image,
   ImageSourcePropType,
+  useWindowDimensions,
 } from 'react-native';
-import { FontAwesome6 } from '@expo/vector-icons';
+import { FontAwesome6, Ionicons } from '@expo/vector-icons';
 import { useUIStore, AppScreen } from '../../store/useUIStore';
 import { COLORS } from '../../constants/colors';
+import { TYPOGRAPHY } from '../../constants/typography';
 
 const { width } = Dimensions.get('window');
 
@@ -27,7 +29,7 @@ const ReportCard = ({ title, description, imagePath, onPress }: ReportCardProps)
     onPress={onPress} 
     style={({ pressed }) => [
       styles.card,
-      { opacity: pressed ? 0.8 : 1, transform: [{ scale: pressed ? 0.98 : 1 }] }
+      { opacity: pressed ? 0.9 : 1, transform: [{ scale: pressed ? 0.98 : 1 }] }
     ]}
   >
     <View style={styles.imageContainer}>
@@ -35,10 +37,12 @@ const ReportCard = ({ title, description, imagePath, onPress }: ReportCardProps)
     </View>
     <View style={styles.contentContainer}>
       <Text style={styles.title}>{title}</Text>
-      <Text style={styles.description} numberOfLines={3}>{description}</Text>
+      <Text style={styles.description} numberOfLines={2}>{description}</Text>
     </View>
     <View style={styles.arrowContainer}>
-      <FontAwesome6 name="chevron-right" size={16} color={COLORS.primary} />
+      <View style={styles.arrowCircle}>
+        <FontAwesome6 name="chevron-right" size={12} color={COLORS.primary} />
+      </View>
     </View>
   </Pressable>
 );
@@ -50,49 +54,49 @@ export default function ReportsMenuScreen() {
     {
       id: 0,
       title: 'Products Report',
-      description: 'A comprehensive Point of Sale product report detailing sales, transactions, and inventory data.',
+      description: 'Detailed insights into sales transactions and inventory movements.',
       imagePath: require('../../../assets/images/product_rep.png'),
       screen: 'PRODUCT_REPORT' as AppScreen,
     },
     {
       id: 1,
       title: 'Invoice Payment Report',
-      description: 'Invoice Report provide a concise report detailing payment transactions recorded in the system.',
+      description: 'Track payment transactions and records within your POS system.',
       imagePath: require('../../../assets/images/invoice_rep.png'),
       screen: 'INVOICE_REPORT' as AppScreen,
     },
     {
       id: 2,
-      title: 'Cashier Report',
-      description: 'Cashier Report provides a summary of financial transactions processed by cashiers.',
+      title: 'Cashier Performance',
+      description: 'Summarized financial metrics processed by individual cashiers.',
       imagePath: require('../../../assets/images/cashier_rep.png'),
       screen: 'CASHIER_REPORT' as AppScreen,
     },
     {
       id: 3,
       title: 'Credit Sale Report',
-      description: 'Credit Report provides a concise overview of credit transactions and payments.',
+      description: 'Concise overview of credit-based transactions and collections.',
       imagePath: require('../../../assets/images/credit_rep.png'),
       screen: 'CREDIT_REPORT' as AppScreen,
     },
     {
       id: 4,
-      title: 'Stock Warehouse Report',
-      description: 'Comprehensive Warehouse Management Report providing detailed insights into inventory levels.',
+      title: 'Warehouse Stock',
+      description: 'Inventory levels and logistics across your primary warehouses.',
       imagePath: require('../../../assets/images/warehouse_rep.png'),
       screen: 'WAREHOUSE_REPORT' as AppScreen,
     },
     {
       id: 5,
-      title: 'Stock Store Report',
-      description: 'Store Performance Report offering a comprehensive overview of sales and inventory status.',
+      title: 'Store Inventory',
+      description: 'Direct visibility into stock levels at your local branch.',
       imagePath: require('../../../assets/images/store_rep.png'),
       screen: 'STORE_REPORT' as AppScreen,
     },
     {
       id: 6,
-      title: 'Daily Cash Report',
-      description: 'Store Performance Report offering a comprehensive overview of sales, customer transactions, and inventory status.',
+      title: 'Daily Cash Flow',
+      description: 'Daily operational summary of sales and customer transactions.',
       imagePath: require('../../../assets/images/store_rep.png'),
       screen: 'DAILY_REPORT' as AppScreen,
     },
@@ -100,24 +104,37 @@ export default function ReportsMenuScreen() {
 
   return (
     <View style={styles.container}>
+      {/* Clean Header with Back Button */}
       <View style={styles.header}>
         <Pressable onPress={() => setScreen('DEFAULT')} style={styles.backButton}>
-          <FontAwesome6 name="arrow-left" size={20} color="#1C1B1F" />
+          <Ionicons name="arrow-back" size={24} color={COLORS.primary} />
         </Pressable>
-        <Text style={styles.headerTitle}>All Reports</Text>
-        <View style={{ width: 40 }} />
+        <Text style={styles.headerTitle}>Analytics Hub</Text>
+        <View style={{ width: 44 }} />
       </View>
-      
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {reports.map((report) => (
-          <ReportCard
-            key={report.id}
-            title={report.title}
-            description={report.description}
-            imagePath={report.imagePath}
-            onPress={() => setScreen(report.screen)}
-          />
-        ))}
+
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent} 
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.mainContent}>
+          <View style={styles.sectionLabelContainer}>
+             <Text style={styles.sectionLabel}>AVAILABLE REPORTS</Text>
+          </View>
+          
+          <View style={styles.grid}>
+            {reports.map((report) => (
+              <ReportCard
+                key={report.id}
+                title={report.title}
+                description={report.description}
+                imagePath={report.imagePath}
+                onPress={() => setScreen(report.screen)}
+              />
+            ))}
+          </View>
+        </View>
+        <View style={{ height: 40 }} />
       </ScrollView>
     </View>
   );
@@ -126,77 +143,103 @@ export default function ReportsMenuScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: '#F8FAFC',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 20,
     backgroundColor: 'white',
     borderBottomWidth: 1,
-    borderBottomColor: '#EEEEEE',
+    borderBottomColor: '#E2E8F0',
   },
   backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: '#F1F5F9',
     justifyContent: 'center',
     alignItems: 'center',
   },
   headerTitle: {
+    ...TYPOGRAPHY.montserrat.bold,
     fontSize: 18,
-    fontWeight: '700',
-    color: '#1C1B1F',
+    color: '#1A202C',
   },
   scrollContent: {
-    padding: 16,
-    paddingBottom: 40,
+    flexGrow: 1,
+  },
+  mainContent: {
+    padding: 20,
+  },
+  sectionLabelContainer: {
+    marginBottom: 20,
+  },
+  sectionLabel: {
+    ...TYPOGRAPHY.montserrat.bold,
+    fontSize: 12,
+    color: '#64748B',
+    letterSpacing: 1.5,
+  },
+  grid: {
+    gap: 15,
   },
   card: {
     flexDirection: 'row',
     backgroundColor: 'white',
-    borderRadius: 16,
+    borderRadius: 20,
     padding: 16,
-    marginBottom: 16,
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.05,
-    shadowRadius: 8,
+    shadowRadius: 10,
     elevation: 3,
     borderWidth: 1,
-    borderColor: '#F0F0F0',
+    borderColor: '#F1F5F9',
   },
   imageContainer: {
     width: 60,
     height: 60,
-    borderRadius: 12,
-    backgroundColor: '#F8F9FA',
+    borderRadius: 15,
+    backgroundColor: '#F8FAFC',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
   },
   image: {
-    width: 40,
-    height: 40,
+    width: 35,
+    height: 35,
   },
   contentContainer: {
     flex: 1,
   },
   title: {
+    ...TYPOGRAPHY.montserrat.bold,
     fontSize: 16,
-    fontWeight: '700',
-    color: '#1C1B1F',
+    color: '#1E293B',
     marginBottom: 4,
   },
   description: {
+    ...TYPOGRAPHY.montserrat.medium,
     fontSize: 12,
     color: '#64748B',
     lineHeight: 18,
   },
   arrowContainer: {
-    marginLeft: 8,
+    marginLeft: 10,
+  },
+  arrowCircle: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#F8FAFC',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
 });

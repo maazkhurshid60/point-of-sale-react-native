@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, Dimensions, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, Pressable, Image, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome6 } from '@expo/vector-icons';
 import { useAuthStore } from '../../store/useAuthStore';
@@ -19,6 +19,7 @@ import { HoldSalesScreen } from '../Sales/HoldSalesScreen';
 import SalesScreen from '../Sales/SalesScreen';
 import OfflineSalesScreen from '../OfflineSales/OfflineSalesScreen';
 import POSScreen from '../POS/POSScreen';
+import EditSaleScreen from '../Sales/EditSaleScreen';
 import ReportsMenuScreen from '../Reports/ReportsMenuScreen';
 import ProductReportScreen from '../Reports/ProductReportScreen';
 import InvoicePaymentReportScreen from '../Reports/InvoicePaymentReportScreen';
@@ -32,13 +33,37 @@ import DashboardMainScreen from './DashboardMainScreen';
 
 import { COLORS } from '../../constants/colors';
 
-const { width } = Dimensions.get('window');
 
 export default function DashboardScreen() {
-  const currentUser = useAuthStore((state: any) => state.currentUser);
   const activeScreen = useUIStore((state) => state.activeScreen);
   const toggleLeftMenu = useUIStore((state) => state.toggleLeftMenu);
-  const toggleRightMenu = useUIStore((state) => state.toggleRightMenu);
+  const setScreen = useUIStore((state) => state.setScreen);
+  const isShiftOpened = useAuthStore((state) => state.isShiftOpened);
+  const showDialog = useDialogStore((state) => state.showDialog);
+
+  // Fetch initial data
+  useEffect(() => {
+    if (isShiftOpened) {
+      useAuthStore.getState().fetchSalesman();
+      useAuthStore.getState().fetchCustomers();
+      useAuthStore.getState().fetchBankAccounts();
+      useAuthStore.getState().fetchCashAccounts();
+      useAuthStore.getState().fetchCreditCardAccounts();
+    }
+  }, [isShiftOpened]);
+
+  // Shift Protection Logic
+  useEffect(() => {
+    const exemptedScreens = ['DEFAULT', 'PROFILE', 'POS_SETTINGS', 'REPORTS_MENU', 'SHIFT_DETAILS', 'PRODUCT_REPORT', 'INVOICE_REPORT', 'CASHIER_REPORT', 'CREDIT_REPORT', 'WAREHOUSE_REPORT', 'STORE_REPORT', 'DAILY_REPORT'];
+    
+    console.log(`Current Screen: ${activeScreen}, Shift Opened: ${isShiftOpened}`);
+    
+    if (!exemptedScreens.includes(activeScreen) && !isShiftOpened) {
+      console.log('Access restricted - open shift required for sales modules');
+      showDialog('OPEN_SHIFT', {});
+      setScreen('DEFAULT');
+    }
+  }, [activeScreen, isShiftOpened]);
 
   const renderContent = () => {
     switch (activeScreen) {
@@ -80,6 +105,8 @@ export default function DashboardScreen() {
         return <WarehouseStockReportScreen />;
       case 'STORE_REPORT':
         return <StoreStockReportScreen />;
+      case 'EDIT_SALE':
+        return <EditSaleScreen />;
       case 'DEFAULT':
       default:
         return <DashboardMainScreen />;
@@ -90,30 +117,50 @@ export default function DashboardScreen() {
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       {/* Header */}
       <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <Pressable
-            onPress={() => toggleLeftMenu(true)}
-            style={({ pressed }) => [
-              styles.menuButton,
-              { backgroundColor: pressed ? '#ebebeb' : '#f8f9fa' }
-            ]}
-          >
-            <FontAwesome6 name="boxes-stacked" size={20} color="#1C1B1F" />
-          </Pressable>
+        {/* Left: Menu Toggle + Logo */}
+        <Pressable
+          onPress={() => toggleLeftMenu(true)}
+          style={styles.headerLeft}
+        >
+          <Image
+            source={require('../../../assets/svgs/poslogo.png')}
+            style={styles.headerLogo}
+          />
+        </Pressable>
+
+        {/* Center: Title */}
+        <View style={styles.headerCenter}>
+          <Text style={styles.headerTitle}>
+            {activeScreen === 'DEFAULT' ? 'Dashboard' : activeScreen.replace(/_/g, ' ')}
+          </Text>
         </View>
 
-        <View style={styles.headerRight}>
-          <Text style={styles.userName}>{currentUser?.username || 'Admin'}</Text>
-          <Pressable
-            onPress={() => toggleRightMenu(true)}
-            style={({ pressed }) => [
-              styles.menuButton,
-              { backgroundColor: pressed ? '#ebebeb' : '#f8f9fa' }
-            ]}
+        {activeScreen === "DEFAULT" ? (
+
+          <TouchableOpacity
+            onPress={() => {
+              // Sign out logic
+              useAuthStore.getState().signOut();
+            }}
+            style={styles.signOutButton}
           >
-            <FontAwesome6 name="bars" size={20} color="#1C1B1F" />
-          </Pressable>
-        </View>
+            <Text style={styles.signOutText}>Sign Out</Text>
+            <FontAwesome6 name="right-from-bracket" size={16} color="white" />
+          </TouchableOpacity>
+
+        )
+          : (
+            <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
+              <TouchableOpacity
+                onPress={() => useUIStore.getState().toggleRightMenu(true)}
+                style={styles.menuButton}
+              >
+                <FontAwesome6 name="bars" size={20} color={COLORS.white} />
+              </TouchableOpacity>
+            </View>
+
+          )
+        }
       </View>
 
       {/* Main Content Area */}
@@ -127,7 +174,7 @@ export default function DashboardScreen() {
 
       {/* Global Dialog Manager - renders shift modals */}
       <GlobalDialogManager />
-    </SafeAreaView>
+    </SafeAreaView >
   );
 }
 
@@ -138,37 +185,65 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 20,
-    backgroundColor: 'white',
-    height: 64,
+    backgroundColor: COLORS.white,
+    height: 70,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-    zIndex: 1,
+    borderBottomColor: '#f0f0f0',
+    zIndex: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 5,
   },
   headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
+    width: 150,
   },
-  headerRight: {
+  headerLogo: {
+    width: 60,
+    height: 60,
+    resizeMode: 'contain',
+  },
+  headerCenter: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: COLORS.primary,
+    textTransform: 'capitalize',
+  },
+  signOutButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
+    gap: 8,
+    width: 150,
+    justifyContent: "center",
   },
-  userName: {
+  signOutText: {
+    color: 'white',
     fontSize: 14,
-    fontWeight: '500',
-    color: COLORS.greyText,
-    marginRight: 8,
+    fontWeight: '600',
   },
   menuButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: COLORS.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
+
+
+
 });

@@ -1,6 +1,9 @@
 import { Dimensions, Platform } from 'react-native';
 import { IMAGE_ASSETS } from '../constants/imageAssets';
 
+
+export const S3_BUCKET_URL = 'https://ownerspos.s3.us-west-1.amazonaws.com';
+
 export const TRANSFORM_DATE_TIME_TO_STRING = (date: Date, showMin = false) => {
   const pad = (n: number) => n.toString().padStart(2, '0');
   const dateStr = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;

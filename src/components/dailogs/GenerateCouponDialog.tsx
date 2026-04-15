@@ -1,338 +1,278 @@
-// import React, { useState } from 'react';
-// import { View, Text, StyleSheet, TextInput, Modal, TouchableOpacity, ActivityIndicator, ScrollView } from 'react-native';
-// import { ScreenUtil } from '../../utils/ScreenUtil';
-// import { COLORS } from '../../constants/colors';
-// import { useAuthStore } from '../../store/useAuthStore';
-// import { useDialogStore } from '../../store/useDialogStore';
-// import { Coupon } from '../../models';
+import React from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, useWindowDimensions, TextInput, ActivityIndicator } from 'react-native';
+import { COLORS } from '../../constants/colors';
+import { useAuthStore } from '../../store/useAuthStore';
 
-// export default function GenerateCouponDialog() {
-//     const { activeDialog, hideDialog } = useDialogStore();
-//     const { generateCoupon, validateCoupon, softwareSettings } = useAuthStore();
-//     const visible = activeDialog === 'GENERATE_COUPON';
+interface GenerateCouponDialogProps {
+  onClose?: () => void;
+}
 
-//     const [activeTab, setActiveTab] = useState<'NEW' | 'EXISTING'>('NEW');
-//     const [amount, setAmount] = useState('');
-//     const [couponNumber, setCouponNumber] = useState('');
-//     const [isLoading, setIsLoading] = useState(false);
-//     const [result, setResult] = useState<Coupon | null>(null);
-//     const [error, setError] = useState<string | null>(null);
+export default function GenerateCouponDialog({ onClose }: GenerateCouponDialogProps) {
+  const { width } = useWindowDimensions();
+  const [isNewCoupon, setIsNewCoupon] = React.useState(true);
+  const [amountOrCode, setAmountOrCode] = React.useState('');
+  const [isLoading, setIsLoading] = React.useState(false);
+  const [couponData, setCouponData] = React.useState<any>(null);
 
-//     const handleGenerate = async () => {
-//         if (!amount || isNaN(parseFloat(amount))) {
-//             setError('Please enter a valid amount');
-//             return;
-//         }
+  const generateCoupon = useAuthStore(state => state.generateCoupon);
+  const validateCoupon = useAuthStore(state => state.validateCoupon);
 
-//         setIsLoading(true);
-//         setError(null);
-//         setResult(null);
+  const isTablet = width >= 768;
+  const dialogWidth = isTablet ? 600 : width * 0.9;
 
-//         try {
-//             const coupon = await generateCoupon(parseFloat(amount));
-//             if (coupon) {
-//                 setResult(coupon);
-//                 setAmount('');
-//             } else {
-//                 setError('Failed to generate coupon');
-//             }
-//         } catch (err: any) {
-//             setError(err.message || 'Error occurred');
-//         } finally {
-//             setIsLoading(false);
-//         }
-//     };
+  const handleAction = async () => {
+    if (!amountOrCode) return;
+    setIsLoading(true);
+    let result;
+    if (isNewCoupon) {
+      // Parse to number as generateCoupon expects a number
+      const amount = parseFloat(amountOrCode);
+      if (isNaN(amount)) {
+        setIsLoading(false);
+        return;
+      }
+      result = await generateCoupon(amount);
+    } else {
+      result = await validateCoupon(amountOrCode);
+    }
+    setIsLoading(false);
+    if (result) {
+      setCouponData(result);
+    }
+  };
 
-//     const handleValidate = async () => {
-//         if (!couponNumber.trim()) {
-//             setError('Please enter coupon number');
-//             return;
-//         }
+  return (
+    <View style={[styles.dialogCard, { width: dialogWidth }]}>
+      <Text style={styles.title}>Coupons</Text>
+      
+      <View style={styles.tabContainer}>
+        <TouchableOpacity 
+          style={[styles.tab, isNewCoupon && styles.activeTab]} 
+          onPress={() => { setIsNewCoupon(true); setCouponData(null); }}
+        >
+          <Text style={[styles.tabText, isNewCoupon && styles.activeTabText]}>New Coupon</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.tab, !isNewCoupon && styles.activeTab]} 
+          onPress={() => { setIsNewCoupon(false); setCouponData(null); }}
+        >
+          <Text style={[styles.tabText, !isNewCoupon && styles.activeTabText]}>Existing Coupon</Text>
+        </TouchableOpacity>
+      </View>
 
-//         setIsLoading(true);
-//         setError(null);
-//         setResult(null);
+      <View style={styles.inputContainer}>
+        <TextInput
+          style={styles.input}
+          placeholder={isNewCoupon ? "enter coupon amount" : "enter coupon code"}
+          placeholderTextColor="#9ca3af"
+          value={amountOrCode}
+          onChangeText={setAmountOrCode}
+          keyboardType={isNewCoupon ? "numeric" : "default"}
+        />
+      </View>
 
-//         try {
-//             const coupon = await validateCoupon(couponNumber.trim());
-//             if (coupon) {
-//                 setResult(coupon);
-//                 setCouponNumber('');
-//             } else {
-//                 setError('Invalid or expired coupon');
-//             }
-//         } catch (err: any) {
-//             setError(err.message || 'Error occurred');
-//         } finally {
-//             setIsLoading(false);
-//         }
-//     };
+      <View style={styles.buttonRow}>
+        <TouchableOpacity style={styles.cancelBtn} onPress={onClose}>
+          <Text style={styles.cancelBtnText}>Cancel</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.actionBtn} onPress={handleAction} disabled={isLoading}>
+          {isLoading ? (
+            <ActivityIndicator color="white" size="small" />
+          ) : (
+            <Text style={styles.actionBtnText}>{isNewCoupon ? "Generate Coupon" : "Get Coupon"}</Text>
+          )}
+        </TouchableOpacity>
+      </View>
 
-//     const reset = () => {
-//         setAmount('');
-//         setCouponNumber('');
-//         setResult(null);
-//         setError(null);
-//         setIsLoading(false);
-//     };
+      {couponData && (
+        <View style={styles.couponCard}>
+          <View style={styles.couponLeft}>
+            <Text style={styles.promoLabel}>promo code</Text>
+            <Text style={styles.promoCode}>{couponData.coupon_number}</Text>
+          </View>
+          <View style={styles.couponRight}>
+            <View style={styles.couponHeader}>
+              <Text style={styles.storeName}>Store</Text>
+              <Text style={styles.couponAmount}>Rs {couponData.coupon_amount}/-</Text>
+            </View>
+            <View style={styles.couponStats}>
+              <View style={styles.statBox}>
+                <Text style={styles.statLabel}>Used</Text>
+                <Text style={[styles.statValue, { color: '#10b981' }]}>{(parseFloat(couponData.coupon_amount) - (parseFloat(couponData.coupon_amount_left) || 0)).toFixed(2)}</Text>
+              </View>
+              <View style={styles.divider} />
+              <View style={styles.statBox}>
+                <Text style={styles.statLabel}>Left</Text>
+                <Text style={[styles.statValue, { color: COLORS.posRed }]}>{couponData.coupon_amount_left || 0}/-</Text>
+              </View>
+            </View>
+            <Text style={styles.expiryText}>Expires: {couponData.expiry_date}</Text>
+          </View>
+        </View>
+      )}
+    </View>
+  );
+}
 
-//     const handleClose = () => {
-//         reset();
-//         hideDialog();
-//     };
-
-//     return (
-//         <Modal
-//             animationType="fade"
-//             transparent={true}
-//             visible={visible}
-//             onRequestClose={handleClose}
-//         >
-//             <TouchableOpacity
-//                 style={styles.overlay}
-//                 activeOpacity={1}
-//                 onPress={handleClose}
-//             >
-//                 <TouchableOpacity
-//                     style={styles.container}
-//                     activeOpacity={1}
-//                 >
-//                     <Text style={styles.title}>Generate Coupon</Text>
-
-//                     <View style={styles.tabs}>
-//                         <TouchableOpacity
-//                             style={[styles.tab, activeTab === 'NEW' && styles.activeTab]}
-//                             onPress={() => { setActiveTab('NEW'); reset(); }}
-//                         >
-//                             <Text style={[styles.tabText, activeTab === 'NEW' && styles.activeTabText]}>New Coupon</Text>
-//                         </TouchableOpacity>
-//                         <TouchableOpacity
-//                             style={[styles.tab, activeTab === 'EXISTING' && styles.activeTab]}
-//                             onPress={() => { setActiveTab('EXISTING'); reset(); }}
-//                         >
-//                             <Text style={[styles.tabText, activeTab === 'EXISTING' && styles.activeTabText]}>Existing Coupon</Text>
-//                         </TouchableOpacity>
-//                     </View>
-
-//                     <View style={styles.content}>
-//                         {activeTab === 'NEW' ? (
-//                             <View style={styles.inputSection}>
-//                                 <Text style={styles.label}>Enter Coupon Amount ({softwareSettings?.currency_symbol || '$'})</Text>
-//                                 <TextInput
-//                                     style={styles.input}
-//                                     value={amount}
-//                                     onChangeText={setAmount}
-//                                     placeholder="0.00"
-//                                     keyboardType="numeric"
-//                                     placeholderTextColor="#999"
-//                                 />
-//                                 <TouchableOpacity style={styles.actionButton} onPress={handleGenerate} disabled={isLoading}>
-//                                     {isLoading ? <ActivityIndicator color="#FFF" /> : <Text style={styles.actionButtonText}>Generate</Text>}
-//                                 </TouchableOpacity>
-//                             </View>
-//                         ) : (
-//                             <View style={styles.inputSection}>
-//                                 <Text style={styles.label}>Enter Coupon Number</Text>
-//                                 <TextInput
-//                                     style={styles.input}
-//                                     value={couponNumber}
-//                                     onChangeText={setCouponNumber}
-//                                     placeholder="Enter Number..."
-//                                     placeholderTextColor="#999"
-//                                 />
-//                                 <TouchableOpacity style={styles.actionButton} onPress={handleValidate} disabled={isLoading}>
-//                                     {isLoading ? <ActivityIndicator color="#FFF" /> : <Text style={styles.actionButtonText}>Get Coupon</Text>}
-//                                 </TouchableOpacity>
-//                             </View>
-//                         )}
-
-//                         {error && <Text style={styles.errorText}>{error}</Text>}
-
-//                         {result && (
-//                             <View style={styles.resultContainer}>
-//                                 <View style={styles.couponCard}>
-//                                     <View style={styles.couponHeader}>
-//                                         <Text style={styles.couponTitle}>COUPON</Text>
-//                                         <Text style={styles.couponNumber}>{result.coupon_number}</Text>
-//                                     </View>
-//                                     <View style={styles.couponBody}>
-//                                         <Text style={styles.couponAmount}>
-//                                             {softwareSettings?.currency_symbol || '$'} {result.coupon_amount_left || result.coupon_amount}
-//                                         </Text>
-//                                         <Text style={styles.couponLabel}>Available Balance</Text>
-//                                     </View>
-//                                     <View style={styles.couponFooter}>
-//                                         <Text style={styles.couponExpiry}>Status: {result.status}</Text>
-//                                     </View>
-//                                 </View>
-//                             </View>
-//                         )}
-//                     </View>
-
-//                     <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
-//                         <Text style={styles.closeButtonText}>Done</Text>
-//                     </TouchableOpacity>
-//                 </TouchableOpacity>
-//             </TouchableOpacity>
-//         </Modal>
-//     );
-// };
-
-// const styles = StyleSheet.create({
-//     overlay: {
-//         flex: 1,
-//         backgroundColor: 'rgba(0,0,0,0.5)',
-//         justifyContent: 'center',
-//         alignItems: 'center',
-//     },
-//     container: {
-//         width: ScreenUtil.width(600),
-//         backgroundColor: '#FFFFFF',
-//         borderRadius: ScreenUtil.width(15),
-//         padding: ScreenUtil.width(30),
-//         elevation: 5,
-//         shadowColor: '#000',
-//         shadowOffset: { width: 0, height: 2 },
-//         shadowOpacity: 0.25,
-//         shadowRadius: 3.84,
-//     },
-//     title: {
-//         fontFamily: 'Montserrat-Bold',
-//         fontSize: ScreenUtil.setSpText(24),
-//         color: COLORS.primary,
-//         marginBottom: ScreenUtil.height(20),
-//         textAlign: 'center',
-//     },
-//     tabs: {
-//         flexDirection: 'row',
-//         backgroundColor: '#F5F5F5',
-//         borderRadius: ScreenUtil.width(8),
-//         marginBottom: ScreenUtil.height(20),
-//         padding: ScreenUtil.width(4),
-//     },
-//     tab: {
-//         flex: 1,
-//         paddingVertical: ScreenUtil.height(10),
-//         alignItems: 'center',
-//         borderRadius: ScreenUtil.width(6),
-//     },
-//     activeTab: {
-//         backgroundColor: COLORS.primary,
-//     },
-//     tabText: {
-//         fontFamily: 'Montserrat-SemiBold',
-//         fontSize: ScreenUtil.setSpText(14),
-//         color: '#666666',
-//     },
-//     activeTabText: {
-//         color: '#FFFFFF',
-//     },
-//     content: {
-//         minHeight: ScreenUtil.height(200),
-//     },
-//     inputSection: {
-//         marginBottom: ScreenUtil.height(20),
-//     },
-//     label: {
-//         fontFamily: 'Montserrat-Medium',
-//         fontSize: ScreenUtil.setSpText(14),
-//         color: '#333333',
-//         marginBottom: ScreenUtil.height(8),
-//     },
-//     input: {
-//         height: ScreenUtil.height(50),
-//         borderWidth: 1,
-//         borderColor: '#DDDDDD',
-//         borderRadius: ScreenUtil.width(8),
-//         paddingHorizontal: ScreenUtil.width(15),
-//         fontFamily: 'Montserrat-Medium',
-//         fontSize: ScreenUtil.setSpText(16),
-//         color: '#333333',
-//         marginBottom: ScreenUtil.height(15),
-//     },
-//     actionButton: {
-//         backgroundColor: COLORS.primary,
-//         borderRadius: ScreenUtil.width(8),
-//         height: ScreenUtil.height(50),
-//         justifyContent: 'center',
-//         alignItems: 'center',
-//     },
-//     actionButtonText: {
-//         fontFamily: 'Montserrat-Bold',
-//         fontSize: ScreenUtil.setSpText(16),
-//         color: '#FFFFFF',
-//     },
-//     errorText: {
-//         fontFamily: 'Montserrat-Medium',
-//         fontSize: ScreenUtil.setSpText(14),
-//         color: '#FF0000',
-//         textAlign: 'center',
-//         marginBottom: ScreenUtil.height(15),
-//     },
-//     resultContainer: {
-//         marginTop: ScreenUtil.height(10),
-//         padding: ScreenUtil.width(10),
-//         backgroundColor: '#FAFAFA',
-//         borderRadius: ScreenUtil.width(10),
-//         borderStyle: 'dashed',
-//         borderWidth: 1,
-//         borderColor: COLORS.primary,
-//     },
-//     couponCard: {
-//         alignItems: 'center',
-//     },
-//     couponHeader: {
-//         alignItems: 'center',
-//         marginBottom: ScreenUtil.height(15),
-//     },
-//     couponTitle: {
-//         fontFamily: 'Montserrat-Bold',
-//         fontSize: ScreenUtil.setSpText(12),
-//         color: '#999999',
-//         letterSpacing: 2,
-//     },
-//     couponNumber: {
-//         fontFamily: 'Montserrat-Bold',
-//         fontSize: ScreenUtil.setSpText(20),
-//         color: COLORS.primary,
-//     },
-//     couponBody: {
-//         alignItems: 'center',
-//         marginBottom: ScreenUtil.height(15),
-//     },
-//     couponAmount: {
-//         fontFamily: 'Montserrat-Bold',
-//         fontSize: ScreenUtil.setSpText(32),
-//         color: '#333333',
-//     },
-//     couponLabel: {
-//         fontFamily: 'Montserrat-Medium',
-//         fontSize: ScreenUtil.setSpText(12),
-//         color: '#666666',
-//     },
-//     couponFooter: {
-//         borderTopWidth: 1,
-//         borderTopColor: '#EEEEEE',
-//         paddingTop: ScreenUtil.height(10),
-//         width: '100%',
-//         alignItems: 'center',
-//     },
-//     couponExpiry: {
-//         fontFamily: 'Montserrat-SemiBold',
-//         fontSize: ScreenUtil.setSpText(14),
-//         color: '#28A745',
-//     },
-//     closeButton: {
-//         borderWidth: 1,
-//         borderColor: COLORS.primary,
-//         borderRadius: ScreenUtil.width(8),
-//         paddingVertical: ScreenUtil.height(12),
-//         marginTop: ScreenUtil.height(20),
-//         alignItems: 'center',
-//     },
-//     closeButtonText: {
-//         fontFamily: 'Montserrat-SemiBold',
-//         fontSize: ScreenUtil.setSpText(16),
-//         color: COLORS.primary,
-//     },
-// });
+const styles = StyleSheet.create({
+  dialogCard: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 30,
+    elevation: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+  },
+  title: {
+    fontSize: 30,
+    fontWeight: '700',
+    color: COLORS.primary,
+    textAlign: 'center',
+    marginBottom: 20,
+    fontFamily: 'Montserrat-Bold',
+  },
+  tabContainer: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+    marginBottom: 30,
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  activeTab: {
+    borderBottomWidth: 2,
+    borderBottomColor: COLORS.primary,
+  },
+  tabText: {
+    fontSize: 16,
+    color: '#9ca3af',
+    fontWeight: '500',
+  },
+  activeTabText: {
+    color: COLORS.primary,
+  },
+  inputContainer: {
+    marginBottom: 20,
+  },
+  input: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#d1d5db',
+    fontSize: 24,
+    color: COLORS.primary,
+    fontWeight: '700',
+    textAlign: 'center',
+    paddingVertical: 10,
+    fontFamily: 'Montserrat-Bold',
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 15,
+    marginTop: 10,
+  },
+  cancelBtn: {
+    paddingVertical: 12,
+    paddingHorizontal: 30,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+  },
+  cancelBtnText: {
+    color: '#64748b',
+    fontWeight: '600',
+  },
+  actionBtn: {
+    backgroundColor: COLORS.primary,
+    paddingVertical: 12,
+    paddingHorizontal: 30,
+    borderRadius: 8,
+    minWidth: 160,
+    alignItems: 'center',
+  },
+  actionBtnText: {
+    color: 'white',
+    fontWeight: '600',
+  },
+  couponCard: {
+    marginTop: 30,
+    backgroundColor: '#1e293b',
+    borderRadius: 15,
+    flexDirection: 'row',
+    height: 150,
+    overflow: 'hidden',
+  },
+  couponLeft: {
+    width: '35%',
+    backgroundColor: COLORS.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 10,
+  },
+  promoLabel: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 12,
+    marginBottom: 5,
+  },
+  promoCode: {
+    color: 'white',
+    fontSize: 22,
+    fontWeight: '800',
+    textAlign: 'center',
+  },
+  couponRight: {
+    flex: 1,
+    padding: 15,
+    justifyContent: 'space-between',
+  },
+  couponHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  storeName: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  couponAmount: {
+    color: '#a78bfa',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  couponStats: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 8,
+    padding: 5,
+  },
+  statBox: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  statLabel: {
+    color: 'white',
+    fontSize: 10,
+  },
+  statValue: {
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  divider: {
+    width: 1,
+    height: '100%',
+    backgroundColor: 'rgba(255,255,255,0.1)',
+  },
+  expiryText: {
+    color: COLORS.posRed,
+    fontSize: 12,
+    fontWeight: '600',
+    textAlign: 'right',
+  },
+});

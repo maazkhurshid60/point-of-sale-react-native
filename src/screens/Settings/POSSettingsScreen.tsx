@@ -127,13 +127,15 @@ export const POSSettingsScreen: React.FC = () => {
           selectedValue={value}
           onValueChange={onValueChange}
           style={styles.picker}
+          dropdownIconColor={COLORS.primary}
         >
-          <Picker.Item label="Select Account" value="" />
+          <Picker.Item label="Select Account" value="" color={COLORS.greyText} />
           {items.map((item: any) => (
             <Picker.Item
               key={item.id}
               label={item.account_name || item.name}
               value={item.id}
+              color={COLORS.textDark}
             />
           ))}
         </Picker>
@@ -213,8 +215,8 @@ export const POSSettingsScreen: React.FC = () => {
                 <Text style={styles.inputLabel}>Customer Table</Text>
               </View>
               <View style={styles.pickerWrapper}>
-                <Picker style={styles.picker} enabled={false}>
-                  <Picker.Item label="Not Connected" value="" />
+                <Picker style={styles.picker} enabled={false} dropdownIconColor={COLORS.greyText}>
+                  <Picker.Item label="Not Connected" value="" color={COLORS.greyText} />
                 </Picker>
               </View>
             </View>
@@ -315,12 +317,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#CED4DA',
     borderRadius: 8,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: 'white',
     overflow: 'hidden',
+    justifyContent: 'center',
   },
   picker: {
     height: 50,
     width: '100%',
+    backgroundColor: 'transparent',
+    color: '#000000',
   },
   checkboxContainer: {
     flexDirection: 'row',

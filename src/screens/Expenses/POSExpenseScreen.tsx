@@ -8,9 +8,11 @@ import {
   ScrollView,
   useWindowDimensions,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
-import { FontAwesome6 } from '@expo/vector-icons';
+import { FontAwesome6, Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useUIStore } from '../../store/useUIStore';
 import { COLORS } from '../../constants/colors';
@@ -29,13 +31,14 @@ export const POSExpenseScreen: React.FC = () => {
   const setScreen = useUIStore((state) => state.setScreen);
 
   const [loading, setLoading] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [formData, setFormData] = useState({
     head_id: '',
     account_no: '',
     amount: '',
     payment_method: 'cash',
     payment_account: '',
-    date: new Date().toISOString().split('T')[0],
+    date: new Date(),
     note: '',
     po: '',
   });
@@ -69,6 +72,13 @@ export const POSExpenseScreen: React.FC = () => {
   const selectedHead = headsList.find(h => h.id.toString() === formData.head_id);
   const isAccountsPayable = selectedHead?.name === 'Accounts Payable';
 
+  const onDateChange = (event: any, selectedDate?: Date) => {
+    setShowDatePicker(false);
+    if (selectedDate) {
+      setFormData({ ...formData, date: selectedDate });
+    }
+  };
+
   const handleSubmit = async () => {
     if (!formData.head_id || !formData.amount) {
       alert('Please fill in required fields (Head and Amount)');
@@ -79,6 +89,7 @@ export const POSExpenseScreen: React.FC = () => {
     try {
       const submitData = {
         ...formData,
+        date: formData.date.toISOString().split('T')[0],
         deposit_slip_file: attachment,
         deposit_slip_filename: attachment?.name,
       };
@@ -105,6 +116,7 @@ export const POSExpenseScreen: React.FC = () => {
         value={value}
         onChangeText={onChange}
         placeholder={placeholder}
+        placeholderTextColor="#94A3B8" // High contrast placeholder
         keyboardType={keyboard}
         multiline={multi}
         numberOfLines={multi ? 4 : 1}
@@ -114,9 +126,10 @@ export const POSExpenseScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
+      {/* Themed Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => setScreen('DEFAULT')}>
-          <FontAwesome6 name="arrow-left" size={20} color={COLORS.primary} />
+          <Ionicons name="arrow-back" size={24} color={COLORS.primary} />
           <Text style={styles.backText}>Back</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Add POS Expense</Text>
@@ -125,7 +138,7 @@ export const POSExpenseScreen: React.FC = () => {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.formCard}>
           <View style={[styles.row, !isTablet && styles.column]}>
-            {/* Account Head */}
+            {/* Account Head Selector */}
             <View style={[styles.fieldContainer, isTablet && styles.tabletField]}>
               <Text style={styles.label}>Head *</Text>
               <View style={styles.pickerContainer}>
@@ -133,14 +146,15 @@ export const POSExpenseScreen: React.FC = () => {
                   style={styles.input}
                   value={selectedHead?.name || ''}
                   placeholder="Select Head Account"
+                  placeholderTextColor="#94A3B8"
                   editable={false}
                 />
                 <ScrollView style={styles.dropdown} nestedScrollEnabled>
                   {headsList.map(head => (
-                    <TouchableOpacity 
-                      key={head.id} 
+                    <TouchableOpacity
+                      key={head.id}
                       style={styles.dropdownItem}
-                      onPress={() => setFormData({...formData, head_id: head.id.toString()})}
+                      onPress={() => setFormData({ ...formData, head_id: head.id.toString() })}
                     >
                       <Text style={styles.dropdownText}>{head.name}</Text>
                     </TouchableOpacity>
@@ -149,12 +163,12 @@ export const POSExpenseScreen: React.FC = () => {
               </View>
             </View>
 
-            {renderInput('Account No', formData.account_no, (t) => setFormData({...formData, account_no: t}), 'Enter account number')}
+            {renderInput('Account No', formData.account_no, (t) => setFormData({ ...formData, account_no: t }), 'Enter account number')}
           </View>
 
           <View style={[styles.row, !isTablet && styles.column]}>
-            {renderInput('Amount *', formData.amount, (t) => setFormData({...formData, amount: t}), '0.00', 'numeric')}
-            
+            {renderInput('Amount *', formData.amount, (t) => setFormData({ ...formData, amount: t }), '0.00', 'numeric')}
+
             <View style={[styles.fieldContainer, isTablet && styles.tabletField]}>
               <Text style={styles.label}>Payment Method</Text>
               <View style={styles.methodToggle}>
@@ -162,7 +176,7 @@ export const POSExpenseScreen: React.FC = () => {
                   <TouchableOpacity
                     key={method}
                     style={[styles.methodBtn, formData.payment_method === method && styles.activeMethod]}
-                    onPress={() => setFormData({...formData, payment_method: method})}
+                    onPress={() => setFormData({ ...formData, payment_method: method })}
                   >
                     <Text style={[styles.methodBtnText, formData.payment_method === method && styles.activeMethodText]}>
                       {method.toUpperCase()}
@@ -174,22 +188,44 @@ export const POSExpenseScreen: React.FC = () => {
           </View>
 
           <View style={[styles.row, !isTablet && styles.column]}>
-            {renderInput('Date', formData.date, (t) => setFormData({...formData, date: t}), 'YYYY-MM-DD')}
-            
+            {/* Proper Date Picker Field */}
+            <View style={[styles.fieldContainer, isTablet && styles.tabletField]}>
+              <Text style={styles.label}>Date</Text>
+              <TouchableOpacity
+                style={styles.input}
+                onPress={() => setShowDatePicker(true)}
+              >
+                <Text style={{ color: 'black', fontSize: 15 }}>
+                  {formData.date.toISOString().split('T')[0]}
+                </Text>
+              </TouchableOpacity>
+              {showDatePicker && (
+                <DateTimePicker
+                  value={formData.date}
+                  mode="date"
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  onChange={onDateChange}
+                />
+              )}
+            </View>
+
+            {/* Select Account Selector */}
             <View style={[styles.fieldContainer, isTablet && styles.tabletField]}>
               <Text style={styles.label}>Select Account</Text>
               <View style={styles.pickerContainer}>
                 <TextInput
                   style={styles.input}
                   placeholder="Choose account"
+                  placeholderTextColor="#94A3B8"
+                  value={accountsList.find(a => a.id.toString() === formData.payment_account)?.name || ''}
                   editable={false}
                 />
                 <ScrollView style={styles.dropdown} nestedScrollEnabled>
                   {accountsList.map(acc => (
-                    <TouchableOpacity 
-                      key={acc.id} 
+                    <TouchableOpacity
+                      key={acc.id}
                       style={styles.dropdownItem}
-                      onPress={() => setFormData({...formData, payment_account: acc.id.toString()})}
+                      onPress={() => setFormData({ ...formData, payment_account: acc.id.toString() })}
                     >
                       <Text style={styles.dropdownText}>{acc.name}</Text>
                     </TouchableOpacity>
@@ -199,7 +235,7 @@ export const POSExpenseScreen: React.FC = () => {
             </View>
           </View>
 
-          {renderInput('Notes', formData.note, (t) => setFormData({...formData, note: t}), 'Enter details...', 'default', true)}
+          {renderInput('Notes', formData.note, (t) => setFormData({ ...formData, note: t }), 'Enter details...', 'default', true)}
 
           {isAccountsPayable && (
             <View style={styles.payableSection}>
@@ -211,14 +247,16 @@ export const POSExpenseScreen: React.FC = () => {
                     <TextInput
                       style={styles.input}
                       placeholder="Select Purchase Order"
+                      placeholderTextColor="#94A3B8"
+                      value={poList.find(p => p.purchaseId.toString() === formData.po)?.purchaseInvoice || ''}
                       editable={false}
                     />
                     <ScrollView style={styles.dropdown} nestedScrollEnabled>
                       {poList.map(po => (
-                        <TouchableOpacity 
-                          key={po.purchaseId} 
+                        <TouchableOpacity
+                          key={po.purchaseId}
                           style={styles.dropdownItem}
-                          onPress={() => setFormData({...formData, po: po.purchaseId.toString()})}
+                          onPress={() => setFormData({ ...formData, po: po.purchaseId.toString() })}
                         >
                           <Text style={styles.dropdownText}>{po.purchaseInvoice || `PO #${po.purchaseId}`}</Text>
                         </TouchableOpacity>
@@ -325,8 +363,9 @@ const styles = StyleSheet.create({
     padding: 12,
     ...TYPOGRAPHY.montserrat.regular,
     fontSize: 15,
-    color: '#1E293B',
+    color: 'black',
     backgroundColor: '#F8FAFC',
+    justifyContent: 'center',
   },
   textArea: {
     height: 100,
@@ -339,7 +378,7 @@ const styles = StyleSheet.create({
     maxHeight: 150,
     backgroundColor: 'white',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: COLORS.primary,
     borderRadius: 8,
     marginTop: 4,
   },

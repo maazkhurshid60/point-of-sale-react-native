@@ -17,6 +17,7 @@ export interface ShiftDetails {
   default_bank_account?: number;
   default_card_account?: number;
   salesman_id?: number;
+  salesman_name?: string;
   fbr_sales_enabled?: boolean;
 }
 

@@ -28,21 +28,29 @@ const RightSideMenu: React.FC = () => {
   const setScreen = useUIStore((state) => state.setScreen);
 
   const currentUser = useAuthStore((state) => state.currentUser);
-  const currentLeadInformation = useAuthStore((state) => state.leadSettings?.[0]);
-  const currentStore = useAuthStore((state) => state.currentStore);
   const signOutRequest = useAuthStore((state) => state.signOut);
 
   const [isSigningOut, setIsSigningOut] = useState(false);
-  const slideAnim = useRef(new Animated.Value(width)).current;
+  const animValue = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.spring(slideAnim, {
-      toValue: isRightMenuOpen ? 0 : width,
+    Animated.spring(animValue, {
+      toValue: isRightMenuOpen ? 1 : 0,
       useNativeDriver: true,
-      friction: 8,
+      friction: 9,
       tension: 40,
     }).start();
-  }, [isRightMenuOpen, width]);
+  }, [isRightMenuOpen]);
+
+  const slideX = animValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: [width, 0],
+  });
+
+  const backdropOpacity = animValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 1],
+  });
 
   const handleSignOut = async () => {
     setIsSigningOut(true);
@@ -62,22 +70,26 @@ const RightSideMenu: React.FC = () => {
   };
 
   return (
-    <View style={StyleSheet.absoluteFill} pointerEvents={isRightMenuOpen ? 'auto' : 'none'}>
-      <Pressable
-        style={[styles.backdrop, { opacity: isRightMenuOpen ? 1 : 0 }]}
-        onPress={() => toggleRightMenu(false)}
-      />
+    <View style={[StyleSheet.absoluteFill, { zIndex: 2100, elevation: 2100 }]} pointerEvents={isRightMenuOpen ? 'auto' : 'none'}>
+      <Animated.View
+        style={[
+          styles.backdrop,
+          { opacity: backdropOpacity }
+        ]}
+      >
+        <Pressable style={StyleSheet.absoluteFill} onPress={() => toggleRightMenu(false)} />
+      </Animated.View>
       <Animated.View
         style={[
           styles.drawerContainer,
           {
-            transform: [{ translateX: slideAnim }],
-            width: isPortrait ? width * 0.92 : width * 0.28
+            transform: [{ translateX: slideX }],
+            width: isPortrait ? width * 0.85 : width * 0.35
           },
         ]}
       >
         <LinearGradient
-          colors={['#6A1B9A', '#D1C4E9', '#6A1B9A']}
+          colors={[COLORS.primary, '#4c1d95']}
           style={styles.gradient}
         >
           <View style={[styles.mainWrapper, { paddingTop: insets.top + 20 }]}>
@@ -230,7 +242,8 @@ const RightSideMenu: React.FC = () => {
 const styles = StyleSheet.create({
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(0,0,0,0.4)',
+
   },
   drawerContainer: {
     position: 'absolute',
@@ -238,15 +251,15 @@ const styles = StyleSheet.create({
     top: 0,
     bottom: 0,
     backgroundColor: COLORS.primary,
-    zIndex: 2000,
-    borderTopLeftRadius: 32,
-    borderBottomLeftRadius: 32,
+    zIndex: 2200,
+    borderTopLeftRadius: 40,
+    borderBottomLeftRadius: 40,
     overflow: 'hidden',
     shadowColor: '#000',
-    shadowOffset: { width: -5, height: 0 },
-    shadowOpacity: 0.3,
-    shadowRadius: 15,
-    elevation: 20,
+    shadowOffset: { width: -10, height: 0 },
+    shadowOpacity: 0.2,
+    shadowRadius: 30,
+    elevation: 3000,
   },
   gradient: {
     flex: 1,
@@ -268,24 +281,25 @@ const styles = StyleSheet.create({
   closeButton: {
     width: 44,
     height: 44,
-    borderRadius: 22,
+    borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.1)',
   },
   headerLabel: {
     ...TYPOGRAPHY.montserrat.bold,
-    color: 'rgba(255,255,255,0.4)',
+    color: 'rgba(255,255,255,0.3)',
     fontSize: 12,
-    letterSpacing: 2,
+    letterSpacing: 3,
     marginRight: 10,
   },
   profileSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 40,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    padding: 15,
-    borderRadius: 20,
+    marginBottom: 35,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    padding: 18,
+    borderRadius: 24,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)',
   },
@@ -294,10 +308,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   avatarContainer: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: 'rgba(255,255,255,0.15)',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -307,9 +321,9 @@ const styles = StyleSheet.create({
     color: 'white',
   },
   userDetails: {
-    ...TYPOGRAPHY.montserrat.regular,
+    ...TYPOGRAPHY.montserrat.medium,
     fontSize: 13,
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: 'rgba(255, 255, 255, 0.6)',
     marginTop: 2,
   },
   menuItems: {
@@ -317,15 +331,15 @@ const styles = StyleSheet.create({
   },
   sectionLabel: {
     ...TYPOGRAPHY.montserrat.bold,
-    color: 'rgba(255,255,255,0.25)',
+    color: 'rgba(255,255,255,0.3)',
     fontSize: 11,
-    letterSpacing: 1.5,
-    marginBottom: 10,
-    marginLeft: 10,
+    letterSpacing: 2,
+    marginBottom: 12,
+    marginLeft: 5,
   },
   sectionDivider: {
     height: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
     marginVertical: 20,
   },
   signOutButton: {
@@ -333,8 +347,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderRadius: 16,
-    marginTop: 10,
+    marginTop: 20,
     gap: 15,
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.2)',
   },
   signOutText: {
     ...TYPOGRAPHY.montserrat.bold,

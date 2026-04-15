@@ -31,7 +31,7 @@ export const LeftSideMenuDropdown: React.FC<LeftSideMenuDropdownProps> = ({
   return (
     <View style={styles.container}>
       <Text style={styles.label}>{label}</Text>
-      
+
       <TouchableOpacity
         style={styles.dropdownButton}
         onPress={() => setIsVisible(true)}
@@ -39,7 +39,7 @@ export const LeftSideMenuDropdown: React.FC<LeftSideMenuDropdownProps> = ({
         <Text style={styles.valueText} numberOfLines={1}>
           {value || 'Not selected'}
         </Text>
-        <FontAwesome6 name="chevron-down" size={12} color="white" />
+        <FontAwesome6 name="chevron-down" size={12} color="black" />
       </TouchableOpacity>
 
       <Modal
@@ -48,8 +48,8 @@ export const LeftSideMenuDropdown: React.FC<LeftSideMenuDropdownProps> = ({
         animationType="fade"
         onRequestClose={() => setIsVisible(false)}
       >
-        <Pressable 
-          style={styles.modalOverlay} 
+        <Pressable
+          style={styles.modalOverlay}
           onPress={() => setIsVisible(false)}
         >
           <View style={styles.modalContent}>
@@ -59,7 +59,7 @@ export const LeftSideMenuDropdown: React.FC<LeftSideMenuDropdownProps> = ({
                 <FontAwesome6 name="xmark" size={20} color={COLORS.textDark} />
               </TouchableOpacity>
             </View>
-            
+
             <FlatList
               data={items}
               keyExtractor={(item) => item.id?.toString() || item.name}
@@ -98,7 +98,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: 'rgba(0,0,0,0.1)',
+    backgroundColor: 'rgba(219, 204, 204, 0.1)',
     borderRadius: 8,
     paddingVertical: 10,
     paddingHorizontal: 12,
@@ -108,7 +108,7 @@ const styles = StyleSheet.create({
   valueText: {
     ...TYPOGRAPHY.montserrat.medium,
     fontSize: 14,
-    color: 'white',
+    color: 'black',
     flex: 1,
     marginRight: 8,
   },

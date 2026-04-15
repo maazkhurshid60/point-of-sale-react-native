@@ -3,10 +3,10 @@
     "name": "owners_inventory_rn",
     "slug": "owners_inventory_rn",
     "version": "1.0.0",
-    "orientation": "default",
+    "orientation": "landscape",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": false,
+    "newArchEnabled": true,
     "scheme": "owners-inventory-rn",
     "splash": {
       "image": "./assets/splash-icon.png",
@@ -30,6 +30,9 @@
       "eas": {
         "projectId": "de685798-7217-4928-a7b9-3c174ff66dcd"
       }
-    }
+    },
+    "plugins": [
+      "@react-native-community/datetimepicker"
+    ]
   }
 }

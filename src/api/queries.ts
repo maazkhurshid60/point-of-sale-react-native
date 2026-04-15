@@ -7,7 +7,7 @@ import { Store, POSId, Customer, Salesman, CashAccount, BankAccount, CreditCardA
 // Generic fetcher for all catalog items
 const fetchCatalog = async <T>(endpoint: string, params?: Record<string, any>): Promise<T[]> => {
   const response = await axiosClient.get(endpoint, { params });
-  return response.data?.success ? (response.data.data ?? response.data.stores ?? response.data.accounts ?? response.data.customers ?? []) : [];
+  return response.data?.success ? (response.data.data ?? response.data.stores ?? response.data.accounts ?? response.data.customers ?? response.data.saleman ?? []) : [];
 };
 
 export const useStores = () => {
@@ -80,10 +80,12 @@ export const useShiftDetails = (shiftId?: number) => {
     queryKey: ['shiftDetails', shiftId],
     queryFn: async () => {
       if (!shiftId) return null;
+      console.log("[useShiftDetails] Fetching for ID:", shiftId, "Type:", typeof shiftId);
       const res = await axiosClient.get(API_ENDPOINTS.SHIFT.DETAILS, {
         params: { shift_id: shiftId }
       });
-      return res.data?.success ? res.data : null;
+      console.log("[useShiftDetails] Response:", res.data);
+      return res.data; // Return everything, even if success is false
     },
     enabled: !!shiftId,
   });

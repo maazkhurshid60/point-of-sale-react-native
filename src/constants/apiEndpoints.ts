@@ -28,6 +28,7 @@ export const API_ENDPOINTS = {
     BANK_ACCOUNTS: "/api/bankaccount",
     CREDIT_CARD_ACCOUNTS: "/api/creditcardaccount",
     CUSTOMERS: "/api/customer",
+    ADD_CUSTOMER: "/api/addcustomer",
     ACCOUNT_HEADS: "/api/posexpansehead",
     EXPENSE_ACCOUNTS: "/api/posexpanseaccount",
     PO_LIST: "/api/get-po-list",
@@ -55,9 +56,11 @@ export const API_ENDPOINTS = {
     PARTIAL_SALE: "/api/partial-sale",
     QUOTATION: "/api/create_quotation",
     DRAFT_SALE: "/api/draftsale",
-    PRINT_BILL: "/api/print_bill",
+    PRINT_BILL: "/api/raw_bill_print",
+    SAMPLE_SALE: "/api/sample_sale",
     UPDATE_SALE: "/api/updatesale",
     GET_INVOICE: "/api/get_invoice",
     UPDATE_KITCHEN_ORDER: "/api/update-order-status",
+    EDIT_SALE_FORM: "/api/editsaleform",
   }
 };

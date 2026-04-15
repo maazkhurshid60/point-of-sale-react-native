@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, Image, Animated, ActivityIndicator, StyleSheet, SafeAreaView, Dimensions } from 'react-native';
+import { View, Text, Image, Animated, ActivityIndicator, StyleSheet, Dimensions } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useNavigation } from '@react-navigation/native';
 

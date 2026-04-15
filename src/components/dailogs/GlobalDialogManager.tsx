@@ -15,6 +15,11 @@ import GoodsIssuanceSlipDialog from './GoodsIssuanceSlipDialog';
 import SampleSaleSlipDialog from './SampleSaleSlipDialog';
 import QuotationDialog from './QuotationDialog';
 import RawBillPrintDialog from './RawBillPrintDialog';
+import AddProductByDialog from './AddProductByDialog';
+import ScanBarcodeForWebDialog from './ScanBarcodeForWebDialog';
+import SalesmanDialog from './SalesmanDialog';
+import CustomerDialog from './CustomerDialog';
+import GenerateCouponDialog from './GenerateCouponDialog';
 
 // DialogComponents uses Partial to allow for incremental migration and to avoid ReferenceErrors
 // for components that are defined inDialogType but not yet imported/implemented here.
@@ -32,6 +37,11 @@ const DialogComponents: Partial<Record<DialogType, any>> = {
   SAMPLE_SALE_SLIP: SampleSaleSlipDialog,
   QUOTATION_SLIP: QuotationDialog,
   RAW_BILL_SLIP: RawBillPrintDialog,
+  ADD_PRODUCT_BY: AddProductByDialog,
+  SCAN_BARCODE_WEB: ScanBarcodeForWebDialog,
+  SALESMAN_SELECTION: SalesmanDialog,
+  CUSTOMER_SELECTION: CustomerDialog,
+  GENERATE_COUPON: GenerateCouponDialog,
 };
 
 export default function GlobalDialogManager() {
@@ -78,6 +88,7 @@ const styles = StyleSheet.create({
   },
   container: {
     width: '100%',
+    maxHeight: '95%',
     justifyContent: 'center',
     alignItems: 'center',
   },

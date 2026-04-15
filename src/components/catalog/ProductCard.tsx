@@ -17,17 +17,24 @@ interface ProductCardProps {
   product: ProductModel;
   onPress?: (product: ProductModel) => void;
   isGridView?: boolean;
+  numColumns?: number;
 }
 
 export const ProductCard: React.FC<ProductCardProps> = ({
   product,
   onPress,
-  isGridView = true
+  isGridView = true,
+  numColumns = 2
 }) => {
-  const { width } = useWindowDimensions();
-  const isPortrait = width < 610;
+  const { width: screenWidth } = useWindowDimensions();
 
   const isOutOfStock = (product.count?.total || 0) <= 0;
+  
+  // Dynamic scaling based on density
+  const isHighDensity = numColumns >= 4;
+  const imageSize = isHighDensity ? 80 : 120;
+  const titleSize = isHighDensity ? 12 : 14;
+  const priceSize = isHighDensity ? 12 : 14;
 
   // Grid Layout
   if (isGridView) {
@@ -38,7 +45,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         disabled={isOutOfStock}
       >
         {/* Product Image */}
-        <View style={styles.imageWrapper}>
+        <View style={[styles.imageWrapper, { height: imageSize }]}>
           {product.image ? (
             <Image
               source={{ uri: product.image }}
@@ -47,7 +54,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             />
           ) : (
             <View style={styles.placeholderImage}>
-              <FontAwesome6 name="image" size={24} color="#ccc" />
+              <FontAwesome6 name="image" size={isHighDensity ? 16 : 24} color="#ccc" />
             </View>
           )}
 
@@ -60,18 +67,20 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
         {/* Product Info */}
         <View style={styles.infoContainer}>
-          <Text style={styles.productName} numberOfLines={2}>
+          <Text style={[styles.productName, { fontSize: titleSize }]} numberOfLines={2}>
             {product.product_name}
           </Text>
           <View style={styles.priceRow}>
-            <Text style={styles.priceText}>
+            <Text style={[styles.priceText, { fontSize: priceSize }]}>
               Rs. {Number(product.selling_price).toLocaleString()}
             </Text>
-            <View style={styles.stockBadge}>
-              <Text style={styles.stockText}>
-                Qty: {product.count?.total || 0}
-              </Text>
-            </View>
+            {!isHighDensity && (
+              <View style={styles.stockBadge}>
+                <Text style={styles.stockText}>
+                  Qty: {product.count?.total || 0}
+                </Text>
+              </View>
+            )}
           </View>
         </View>
       </TouchableOpacity>

@@ -40,16 +40,16 @@ export const HoldSalesScreen: React.FC = () => {
       'Are you sure you want to recall this sale? The current cart will be replaced.',
       [
         { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Recall', 
+        {
+          text: 'Recall',
           onPress: async () => {
             const success = await recallSale(sale.sale_id);
             if (success) {
-              setScreen('DEFAULT');
+              setScreen('POS_BILLING');
             } else {
               Alert.alert('Error', 'Failed to recall sale');
             }
-          } 
+          }
         },
       ]
     );
@@ -61,15 +61,15 @@ export const HoldSalesScreen: React.FC = () => {
       'Are you sure you want to delete this draft?',
       [
         { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Delete', 
+        {
+          text: 'Delete',
           style: 'destructive',
           onPress: async () => {
             const success = await deleteHoldSale(saleId);
             if (!success) {
               Alert.alert('Error', 'Failed to delete sale');
             }
-          } 
+          }
         },
       ]
     );

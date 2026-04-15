@@ -17,6 +17,7 @@ import { useStores, usePOSIDs } from '../../api/queries';
 import { COLORS } from '../../constants/colors';
 import { TYPOGRAPHY } from '../../constants/typography';
 import { FontAwesome6 } from '@expo/vector-icons';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface OpenShiftDialogProps {
   onOpen?: (amount: number) => void;
@@ -29,6 +30,7 @@ export default function OpenShiftDialog({ onOpen, onClose }: OpenShiftDialogProp
 
   const openShift = useAuthStore((state) => state.openShift);
   const setScreen = useUIStore((state) => state.setScreen);
+  const queryClient = useQueryClient();
   const { data: stores, isLoading: loadingStores } = useStores();
   const { data: posIds, isLoading: loadingPos } = usePOSIDs();
 
@@ -61,6 +63,11 @@ export default function OpenShiftDialog({ onOpen, onClose }: OpenShiftDialogProp
       setIsSubmitting(false);
 
       if (success) {
+        // Hard refresh all shift related queries
+        await queryClient.invalidateQueries({ queryKey: ['shiftDetails'] });
+        await queryClient.invalidateQueries({ queryKey: ['shift'] });
+        await queryClient.refetchQueries({ queryKey: ['shiftDetails'] });
+
         if (onOpen) onOpen(parseFloat(amount) || 0);
         setScreen('POS_BILLING');
         onClose();
@@ -109,10 +116,10 @@ export default function OpenShiftDialog({ onOpen, onClose }: OpenShiftDialogProp
                 onPress={() => setSelectedStore(item.store_id)}
                 style={[styles.selectionItem, selectedStore === item.store_id && styles.activeItem]}
               >
-                <FontAwesome6 
-                  name={selectedStore === item.store_id ? "circle-dot" : "circle"} 
-                  size={14} 
-                  color={selectedStore === item.store_id ? COLORS.primary : "#94A3B8"} 
+                <FontAwesome6
+                  name={selectedStore === item.store_id ? "circle-dot" : "circle"}
+                  size={14}
+                  color={selectedStore === item.store_id ? COLORS.primary : "#94A3B8"}
                 />
                 <Text style={[styles.itemText, selectedStore === item.store_id && styles.activeItemText]}>
                   {item.store_name || item.name}
@@ -136,11 +143,11 @@ export default function OpenShiftDialog({ onOpen, onClose }: OpenShiftDialogProp
                   onPress={() => setSelectedPos(id)}
                   style={[styles.selectionItem, selectedPos === id && styles.activeItem]}
                 >
-                  <FontAwesome6 
-                  name={selectedPos === id ? "circle-dot" : "circle"} 
-                  size={14} 
-                  color={selectedPos === id ? COLORS.primary : "#94A3B8"} 
-                />
+                  <FontAwesome6
+                    name={selectedPos === id ? "circle-dot" : "circle"}
+                    size={14}
+                    color={selectedPos === id ? COLORS.primary : "#94A3B8"}
+                  />
                   <Text style={[styles.itemText, selectedPos === id && styles.activeItemText]}>
                     {item.name} (ID: {id})
                   </Text>
@@ -162,8 +169,8 @@ export default function OpenShiftDialog({ onOpen, onClose }: OpenShiftDialogProp
         </View>
 
         {/* Dashboard Back Button */}
-        <TouchableOpacity 
-          style={styles.dashboardBtn} 
+        <TouchableOpacity
+          style={styles.dashboardBtn}
           onPress={() => {
             setScreen('DEFAULT');
             onClose();

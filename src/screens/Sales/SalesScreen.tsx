@@ -13,13 +13,16 @@ import { FontAwesome6 } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
 import { useSalesStore } from '../../store/useSalesStore';
 import { useAuthStore } from '../../store/useAuthStore';
+import { useUIStore } from '../../store/useUIStore';
 import { useDialogStore, DialogType } from '../../store/useDialogStore';
 import { COLORS } from '../../constants/colors';
 import { TYPOGRAPHY } from '../../constants/typography';
 
 const SalesScreen: React.FC = () => {
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
   const isTablet = width > 768;
+  const isLandscape = width > height;
+  const isLargeTablet = width > 1024;
 
   const sales = useSalesStore((state) => state.sales);
   const isLoading = useSalesStore((state) => state.isLoading);
@@ -38,6 +41,7 @@ const SalesScreen: React.FC = () => {
     fetchSales(1);
     fetchStoreOptions();
     useAuthStore.getState().fetchCustomers().then((data) => {
+
       setCustomersList(data || []);
     });
   }, []);
@@ -89,42 +93,70 @@ const SalesScreen: React.FC = () => {
     }
   };
 
+  const handleEdit = async (sale: any) => {
+    await useSalesStore.getState().fetchEditSaleForm(sale.sale_id, sale);
+    useUIStore.getState().setScreen('EDIT_SALE');
+  };
+
   const StatusBadge = ({ status, color }: { status: string; color: string }) => (
-    <View style={[styles.badge, { backgroundColor: color + '20', borderColor: color }]}>
+    <View style={[styles.badge, { backgroundColor: color + '15', borderColor: color + '30' }]}>
       <Text style={[styles.badgeText, { color }]}>{status}</Text>
     </View>
   );
 
+  const contentMaxWidth = isLargeTablet ? 1200 : isTablet ? 1000 : '100%';
+
   const renderHeader = () => (
     <View style={styles.header}>
-      <View>
-        <Text style={styles.breadcrumb}>Dashboard / <Text style={{ color: COLORS.primary }}>Sales History</Text></Text>
-        <Text style={styles.title}>Sales Records</Text>
+      <View style={[styles.headerInner, { maxWidth: contentMaxWidth, alignSelf: 'center' }]}>
+        <View>
+          <Text style={styles.breadcrumb}>Dashboard / <Text style={{ color: COLORS.primary }}>Sales History</Text></Text>
+          <Text style={styles.title}>Sales Records</Text>
+        </View>
+        <View style={styles.headerActions}>
+          {isTablet && (
+            <Pressable style={styles.resetAllBtn} onPress={() => { resetFilters(); fetchSales(1); }}>
+              <FontAwesome6 name="filter-circle-xmark" size={14} color={COLORS.posRed} />
+              <Text style={styles.resetAllText}>Reset Filters</Text>
+            </Pressable>
+          )}
+          <Pressable style={styles.refreshButton} onPress={onRefresh}>
+            <FontAwesome6 name="rotate" size={16} color={COLORS.primary} />
+          </Pressable>
+        </View>
       </View>
-      <Pressable style={styles.refreshButton} onPress={onRefresh}>
-        <FontAwesome6 name="rotate" size={16} color={COLORS.primary} />
-      </Pressable>
     </View>
   );
 
   const renderFilters = () => (
-    <View style={[styles.filterSection, { flexWrap: 'wrap' }]}>
-      <View style={{ minWidth: isTablet ? 'auto' : '47%', flex: isTablet ? 1 : 1, height: 46, borderRadius: 12, borderWidth: 1, borderColor: '#e9ecef', overflow: 'hidden' }}>
-        <Picker
-          selectedValue={filters.saleType}
-          onValueChange={(val) => { setFilter('saleType', val); fetchSales(1); }}
-          style={{ height: 46, backgroundColor: '#f8f9fa' }}
-        >
-          <Picker.Item label="Sales" value="sale" />
-          <Picker.Item label="Samples" value="sample" />
-        </Picker>
+    <View style={[
+      styles.filterSection,
+      { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' },
+      (!isTablet && !isLandscape) && styles.filterSectionMobile,
+      isLandscape && !isTablet && { flexWrap: 'nowrap' }
+    ]}>
+      {/* Sale Type Picker */}
+      <View style={[styles.filterItem, !isTablet && !isLandscape && { width: '48.5%' }]}>
+        <View style={styles.pickerWrapper}>
+          <Picker
+            selectedValue={filters.saleType}
+            onValueChange={(val) => { setFilter('saleType', val); fetchSales(1); }}
+            style={styles.picker}
+            dropdownIconColor={COLORS.primary}
+            mode="dropdown"
+          >
+            <Picker.Item label="Sales Records" value="sale" color={COLORS.textDark} />
+            <Picker.Item label="Sample Records" value="sample" color={COLORS.textDark} />
+          </Picker>
+        </View>
       </View>
 
-      <View style={[styles.searchContainer, { minWidth: isTablet ? 'auto' : '47%', flex: isTablet ? 1 : 1 }]}>
+      {/* Invoice Search */}
+      <View style={[styles.searchContainer, !isTablet && !isLandscape && { width: '48.5%' }]}>
         <FontAwesome6 name="magnifying-glass" size={14} color={COLORS.greyText} style={styles.searchIcon} />
         <TextInput
           style={styles.searchInput}
-          placeholder="Invoice/Ticket"
+          placeholder="Invoice #"
           placeholderTextColor={COLORS.greyText}
           value={filters.invoiceNo}
           onChangeText={(val) => setFilter('invoiceNo', val)}
@@ -132,10 +164,12 @@ const SalesScreen: React.FC = () => {
         />
       </View>
 
-      <View style={{ minWidth: isTablet ? 'auto' : '47%', flex: isTablet ? 1 : 1, height: 46, flexDirection: 'row', alignItems: 'center', backgroundColor: '#f8f9fa', borderRadius: 12, borderWidth: 1, borderColor: '#e9ecef', paddingHorizontal: 10 }}>
+      {/* Date Filter */}
+      <View style={[styles.dateContainer, !isTablet && !isLandscape && { width: '48.5%' }]}>
         <TextInput
-          style={{ flex: 1, ...TYPOGRAPHY.montserrat.regular }}
+          style={styles.dateInput}
           placeholder="YYYY-MM-DD"
+          placeholderTextColor={COLORS.greyText}
           value={filters.date || ''}
           onChangeText={(val) => setFilter('date', val)}
           onSubmitEditing={() => fetchSales(1)}
@@ -143,24 +177,29 @@ const SalesScreen: React.FC = () => {
         <FontAwesome6 name="calendar-days" size={14} color={COLORS.primary} />
       </View>
 
-      <View style={{ minWidth: isTablet ? 'auto' : '47%', flex: isTablet ? 1.5 : 1, height: 46, borderRadius: 12, borderWidth: 1, borderColor: '#e9ecef', overflow: 'hidden' }}>
-        <Picker
-          selectedValue={filters.customerId || ''}
-          onValueChange={(val) => {
-            setFilter('customerId', val ? String(val) : '');
-            fetchSales(1);
-          }}
-          style={{ height: 46, backgroundColor: '#f8f9fa' }}
-        >
-          <Picker.Item label="Choose Customer" value="" color={COLORS.greyText} />
-          {customersList.map((customer: any) => (
-            <Picker.Item key={customer.customer_id} label={customer.name} value={String(customer.customer_id)} />
-          ))}
-        </Picker>
+      {/* Customer Picker */}
+      <View style={[styles.filterItem, !isTablet && !isLandscape && { width: '48.5%' }, (isTablet || isLandscape) && { flex: 1.5 }]}>
+        <View style={styles.pickerWrapper}>
+          <Picker
+            selectedValue={filters.customerId || ''}
+            onValueChange={(val) => {
+              setFilter('customerId', val ? String(val) : '');
+              fetchSales(1);
+            }}
+            style={styles.picker}
+            dropdownIconColor={COLORS.primary}
+            mode="dropdown"
+          >
+            <Picker.Item label="All Customers" value="" color={COLORS.greyText} />
+            {customersList.map((customer: any) => (
+              <Picker.Item key={customer.customer_id} label={customer.name} value={String(customer.customer_id)} color={COLORS.textDark} />
+            ))}
+          </Picker>
+        </View>
       </View>
 
-      {filters.customerId ? (
-        <Pressable style={styles.resetButton} onPress={() => { setFilter('customerId', ''); fetchSales(1); }}>
+      {!isTablet && filters.customerId ? (
+        <Pressable style={styles.mobileResetBtn} onPress={() => { setFilter('customerId', ''); fetchSales(1); }}>
           <FontAwesome6 name="circle-xmark" size={16} color={COLORS.posRed} />
         </Pressable>
       ) : null}
@@ -168,79 +207,80 @@ const SalesScreen: React.FC = () => {
   );
 
   const renderPagination = () => {
-    console.log('Current Pagination State:', pagination);
     if (sales.length === 0) return null;
 
     return (
       <View style={styles.paginationContainer}>
-        <Pressable
-          style={[styles.pageButton, !pagination.hasPrevPage && styles.pageButtonDisabled]}
-          onPress={() => pagination.hasPrevPage && fetchSales(pagination.currentPage - 1)}
-          disabled={!pagination.hasPrevPage || isLoading}
-        >
-          <FontAwesome6 name="chevron-left" size={14} color={!pagination.hasPrevPage ? COLORS.greyText : COLORS.primary} />
-          <Text style={[styles.pageButtonText, !pagination.hasPrevPage && { color: COLORS.greyText }]}>Prev</Text>
-        </Pressable>
+        <View style={[styles.paginationInner, { maxWidth: contentMaxWidth, alignSelf: 'center' }]}>
+          <Pressable
+            style={[styles.pageButton, !pagination.hasPrevPage && styles.pageButtonDisabled]}
+            onPress={() => pagination.hasPrevPage && fetchSales(pagination.currentPage - 1)}
+            disabled={!pagination.hasPrevPage || isLoading}
+          >
+            <FontAwesome6 name="chevron-left" size={12} color={!pagination.hasPrevPage ? COLORS.greyText : COLORS.primary} />
+            <Text style={[styles.pageButtonText, !pagination.hasPrevPage && { color: COLORS.greyText }]}>Previous</Text>
+          </Pressable>
 
-        <View style={styles.pageIndicator}>
-          <Text style={styles.pageInfoText}>
-            Page <Text style={{ color: COLORS.primary, fontWeight: '700' }}>{pagination.currentPage}</Text>
-          </Text>
-          {pagination.total > 0 && <Text style={styles.totalRecordsText}>{pagination.total} Records</Text>}
+          <View style={styles.pageIndicator}>
+            <Text style={styles.pageInfoText}>
+              Page <Text style={{ color: COLORS.primary, fontWeight: '700' }}>{pagination.currentPage}</Text>
+            </Text>
+            {pagination.total > 0 && <Text style={styles.totalRecordsText}>{pagination.total} Records Found</Text>}
+          </View>
+
+          <Pressable
+            style={[styles.pageButton, !pagination.hasNextPage && styles.pageButtonDisabled]}
+            onPress={() => pagination.hasNextPage && fetchSales(pagination.currentPage + 1)}
+            disabled={!pagination.hasNextPage || isLoading}
+          >
+            <Text style={[styles.pageButtonText, !pagination.hasNextPage && { color: COLORS.greyText }]}>Next</Text>
+            <FontAwesome6 name="chevron-right" size={12} color={!pagination.hasNextPage ? COLORS.greyText : COLORS.primary} />
+          </Pressable>
         </View>
-
-        <Pressable
-          style={[styles.pageButton, !pagination.hasNextPage && styles.pageButtonDisabled]}
-          onPress={() => pagination.hasNextPage && fetchSales(pagination.currentPage + 1)}
-          disabled={!pagination.hasNextPage || isLoading}
-        >
-          <Text style={[styles.pageButtonText, !pagination.hasNextPage && { color: COLORS.greyText }]}>Next</Text>
-          <FontAwesome6 name="chevron-right" size={14} color={!pagination.hasNextPage ? COLORS.greyText : COLORS.primary} />
-        </Pressable>
       </View>
     );
   };
 
   const renderTableHeader = () => (
     <View style={styles.tableHeaderRow}>
-      <Text style={[styles.columnHeader, { flex: 1.0 }]}>ID</Text>
+      <Text style={[styles.columnHeader, { flex: 0.8 }]}>ID</Text>
       <Text style={[styles.columnHeader, { flex: 2.2 }]}>INVOICE</Text>
       <Text style={[styles.columnHeader, { flex: 1.2 }]}>DATE</Text>
       <Text style={[styles.columnHeader, { flex: 2.0 }]}>CUSTOMER</Text>
       <Text style={[styles.columnHeader, { flex: 2.5 }]}>STATUS</Text>
       <Text style={[styles.columnHeader, { flex: 1.2, textAlign: 'right' }]}>TOTAL</Text>
       <Text style={[styles.columnHeader, { flex: 1.2, textAlign: 'right' }]}>PAID</Text>
-      <Text style={[styles.columnHeader, { flex: 1.2, textAlign: 'right' }]}>BALANCE</Text>
-      <Text style={[styles.columnHeader, { flex: 0.5, textAlign: 'center' }]}>TABLE</Text>
+      <Text style={[styles.columnHeader, { flex: 1.2, textAlign: 'right' }]}>BAL</Text>
       <Text style={[styles.columnHeader, { flex: 2.5, textAlign: 'right' }]}>ACTIONS</Text>
     </View>
   );
 
   const renderTableRow = (item: any, idx: number) => (
     <View key={item.sale_id || idx} style={styles.tableRow}>
-      <Text style={[styles.cellText, { flex: 1.0 }]}>{item.sale_id}</Text>
+      <Text style={[styles.cellText, { flex: 0.8, color: COLORS.greyText }]}>{item.sale_id}</Text>
       <Text style={[styles.cellText, styles.invoiceText, { flex: 2.2 }]} selectable>{item.invoice_no}</Text>
-      <Text style={[styles.cellText, { flex: 1.2 }]}>
-        {item.created_at ? new Date(item.created_at).toLocaleDateString() : 'N/A'}
-      </Text>
-      <Text style={[styles.cellText, { flex: 2.0 }]} numberOfLines={1}>{item.customer?.name || 'Walk-in'}</Text>
+      <View style={{ flex: 1.2 }}>
+        <Text style={styles.cellText}>
+          {item.created_at ? new Date(item.created_at).toLocaleDateString() : '-'}
+        </Text>
+      </View>
+      <Text style={[styles.cellText, { flex: 2.0 }]} numberOfLines={1}>{item.customer?.name || 'Walk-in Customer'}</Text>
 
       <View style={[styles.cell, { flex: 2.5, flexDirection: 'row', gap: 4, flexWrap: 'wrap' }]}>
         {item.status === 'Fulfilled' && <StatusBadge status="Fulfilled" color={COLORS.posGreen} />}
         {item.status === 'Unfulfilled' && <StatusBadge status="Unfulfilled" color={COLORS.posRed} />}
         {item.payment_status === 'Paid' && <StatusBadge status="Paid" color={COLORS.posGreen} />}
-        {item.payment_status === 'Partial' && <StatusBadge status="Partial" color={'#f39c12'} />}
+        {item.payment_status === 'Partial' && <StatusBadge status="Partial" color={'#f59e0b'} />}
         {item.payment_status === 'Owing' && <StatusBadge status="Owing" color={COLORS.posRed} />}
         {item.payment_status === 'UnInvoiced' && <StatusBadge status="UnInvoiced" color={COLORS.greyText} />}
         {item.payment_status === 'Invoiced' && <StatusBadge status="Invoiced" color={COLORS.primary} />}
       </View>
 
       <Text style={[styles.cellText, styles.totalText, { flex: 1.2, textAlign: 'right' }]}>{item.total_bill}</Text>
-      <Text style={[styles.cellText, styles.totalText, { flex: 1.2, textAlign: 'right' }]}>{item.amount_paid}</Text>
-      <Text style={[styles.cellText, styles.totalText, { flex: 1.2, textAlign: 'right' }]}>{item.balance}</Text>
-      <Text style={[styles.cellText, { flex: 0.5, textAlign: 'center' }]}>{''}</Text>
+      <Text style={[styles.cellText, styles.totalText, { flex: 1.2, textAlign: 'right', color: COLORS.posGreen }]}>{item.amount_paid}</Text>
+      <Text style={[styles.cellText, styles.totalText, { flex: 1.2, textAlign: 'right', color: Number(item.balance) > 0 ? COLORS.posRed : COLORS.textDark }]}>{item.balance}</Text>
 
-      <View style={[styles.cell, { flex: 2.5, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 6 }]}>
+      <View style={[styles.cell, { flex: 2.5, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 8 }]}>
         <View style={styles.actionPickerContainer}>
           <Picker
             selectedValue={"Select"}
@@ -250,17 +290,19 @@ const SalesScreen: React.FC = () => {
                 handleAction(val, item);
               }
             }}
+            dropdownIconColor={COLORS.primary}
+            mode="dropdown"
           >
-            <Picker.Item label="Action" value="Select" color={COLORS.greyText} />
-            <Picker.Item label="Invoice" value="Invoice" />
-            <Picker.Item label="Ticket" value="Ticket" />
-            <Picker.Item label="GDS" value="GDS" />
-            <Picker.Item label="GIS" value="GIS" />
-            {item.type === 'sample' && <Picker.Item label="Sample Slip" value="Sample" />}
+            <Picker.Item label="Quick View" value="Select" color="#64748B" style={{ backgroundColor: COLORS.white }} />
+            <Picker.Item label="Invoice Slip" value="Invoice" color="#111827" style={{ backgroundColor: COLORS.white }} />
+            <Picker.Item label="Bill Ticket" value="Ticket" color="#111827" style={{ backgroundColor: COLORS.white }} />
+            <Picker.Item label="Delivery GDS" value="GDS" color="#111827" style={{ backgroundColor: COLORS.white }} />
+            <Picker.Item label="Issuance GIS" value="GIS" color="#111827" style={{ backgroundColor: COLORS.white }} />
+            {item.type === 'sample' && <Picker.Item label="Sample Slip" value="Sample" color="#111827" style={{ backgroundColor: COLORS.white }} />}
           </Picker>
         </View>
-        <Pressable style={styles.actionIcon} onPress={() => { console.log('Edit Sale', item.sale_id) }}>
-          <FontAwesome6 name="pen-to-square" size={16} color={COLORS.primary} />
+        <Pressable style={styles.editIcon} onPress={() => handleEdit(item)}>
+          <FontAwesome6 name="pen-to-square" size={14} color={COLORS.primary} />
         </Pressable>
       </View>
     </View>
@@ -269,32 +311,39 @@ const SalesScreen: React.FC = () => {
   return (
     <View style={styles.container}>
       {renderHeader()}
-      {renderFilters()}
 
-      <View style={styles.tableContainer}>
-        <ScrollView horizontal={true} showsHorizontalScrollIndicator={true} style={{ flex: 1 }}>
-          <View style={{ minWidth: isTablet ? 0 : 900, flex: 1 }}>
-            {renderTableHeader()}
-            <ScrollView showsVerticalScrollIndicator={false}>
+      <View style={styles.mainContent}>
+        {renderFilters()}
+
+        <View style={[
+          styles.tableBlock,
+          { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' },
+          isLandscape && { flex: 1 }
+        ]}>
+          <ScrollView horizontal={true} showsHorizontalScrollIndicator={true} style={{ flex: 1 }}>
+            <View style={{ minWidth: (isTablet || isLandscape) ? Math.max(width - 40, 1050) : 950, flex: 1 }}>
+              {renderTableHeader()}
               {isLoading ? (
                 <View style={styles.loaderContainer}>
                   <ActivityIndicator size="large" color={COLORS.primary} />
-                  <Text style={styles.loaderText}>Fetching sales...</Text>
+                  <Text style={styles.loaderText}>Fetching sales records...</Text>
                 </View>
               ) : sales.length > 0 ? (
                 sales.map(renderTableRow)
               ) : (
                 <View style={styles.emptyContainer}>
-                  <FontAwesome6 name="folder-open" size={48} color={COLORS.greyText} />
+                  <View style={styles.emptyIconCircle}>
+                    <FontAwesome6 name="box-open" size={24} color={COLORS.greyText} />
+                  </View>
                   <Text style={styles.emptyText}>No sales records found</Text>
                 </View>
               )}
-              <View style={{ height: 20 }} />
-            </ScrollView>
-          </View>
-        </ScrollView>
-        {renderPagination()}
+            </View>
+          </ScrollView>
+        </View>
       </View>
+
+      {renderPagination()}
     </View>
   );
 };
@@ -302,33 +351,68 @@ const SalesScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-    padding: 20,
+    backgroundColor: '#F8FAFC',
+  },
+  mainContent: {
+    flex: 1,
+    paddingHorizontal: 20,
   },
   header: {
+    backgroundColor: 'white',
+    paddingHorizontal: 20,
+    paddingVertical: 18,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+    marginBottom: 20,
+    elevation: 2,
+    zIndex: 10,
+    width: '100%',
+  },
+  headerInner: {
+    width: '100%',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
   breadcrumb: {
-    ...TYPOGRAPHY.montserrat.regular,
-    fontSize: 12,
-    color: COLORS.greyText,
+    ...TYPOGRAPHY.montserrat.medium,
+    fontSize: 11,
+    color: '#64748B',
     marginBottom: 4,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
   title: {
     ...TYPOGRAPHY.montserrat.bold,
     fontSize: 24,
-    color: COLORS.black,
+    color: '#1E293B',
   },
   refreshButton: {
-    width: 44,
-    height: 44,
+    width: 42,
+    height: 42,
     borderRadius: 12,
-    backgroundColor: COLORS.primary + '10',
+    backgroundColor: '#F1F5F9',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  resetAllBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: '#FEF2F2',
+    borderRadius: 10,
+  },
+  resetAllText: {
+    ...TYPOGRAPHY.montserrat.bold,
+    fontSize: 13,
+    color: COLORS.posRed,
   },
   filterSection: {
     flexDirection: 'row',
@@ -336,89 +420,113 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     gap: 12,
   },
+  filterSectionMobile: {
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  filterItem: {
+    flex: 1,
+    height: 52, // Increased height for picker visibility
+  },
+  pickerWrapper: {
+    flex: 1,
+    backgroundColor: 'white', // Clean pure white
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    overflow: 'hidden',
+    justifyContent: 'center',
+  },
+  picker: {
+    height: 52,
+    width: '100%',
+    color: '#1E293B', // High-contrast Slate text
+    backgroundColor: 'transparent',
+  },
   searchContainer: {
     flex: 1,
-    height: 46,
+    height: 48,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f8f9fa',
+    backgroundColor: 'white',
     borderRadius: 12,
     paddingHorizontal: 15,
     borderWidth: 1,
-    borderColor: '#e9ecef',
+    borderColor: '#E2E8F0',
   },
   searchIcon: {
     marginRight: 10,
   },
   searchInput: {
     flex: 1,
-    ...TYPOGRAPHY.montserrat.regular,
+    ...TYPOGRAPHY.montserrat.medium,
     fontSize: 14,
-    color: COLORS.black,
+    color: '#1E293B',
   },
-  filterOptions: {
-    flex: 1.5,
-  },
-  filterChip: {
+  dateContainer: {
+    flex: 1,
+    height: 48,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.primary + '05',
-    paddingHorizontal: 8,
-    paddingVertical: 8,
-    borderRadius: 8,
-    marginRight: 8,
-    borderWidth: 1,
-    borderColor: COLORS.primary + '20',
-    gap: 6,
-  },
-  filterChipText: {
-    ...TYPOGRAPHY.montserrat.medium,
-    fontSize: 12,
-    color: COLORS.primary,
-  },
-  resetButton: {
-    paddingHorizontal: 10,
-    justifyContent: 'center',
-  },
-  resetButtonText: {
-    ...TYPOGRAPHY.montserrat.medium,
-    fontSize: 12,
-    color: COLORS.posRed,
-  },
-  tableContainer: {
-    flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: 'white',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#f1f3f5',
+    borderColor: '#E2E8F0',
+    paddingHorizontal: 15,
+  },
+  dateInput: {
+    flex: 1,
+    ...TYPOGRAPHY.montserrat.medium,
+    fontSize: 14,
+    color: '#1E293B',
+  },
+  mobileResetBtn: {
+    padding: 10,
+    justifyContent: 'center',
+  },
+  tableBlock: {
+    flex: 1,
+    backgroundColor: 'white',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
     overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.03,
+    shadowRadius: 10,
+    elevation: 2,
+    marginBottom: 10,
   },
   tableHeaderRow: {
     flexDirection: 'row',
-    backgroundColor: '#f8f9fa',
-    paddingVertical: 12,
-    paddingHorizontal: 12,
+    backgroundColor: '#F8FAFC',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#e9ecef',
+    borderBottomColor: '#E2E8F0',
+    alignItems: 'center',
   },
   columnHeader: {
     ...TYPOGRAPHY.montserrat.bold,
-    fontSize: 12,
-    color: COLORS.greyText,
+    fontSize: 11,
+    color: '#64748B',
     textTransform: 'uppercase',
+    letterSpacing: 1,
   },
   tableRow: {
     flexDirection: 'row',
-    paddingVertical: 10,
-    paddingHorizontal: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f8f9fa',
+    borderBottomColor: '#F1F5F9',
     alignItems: 'center',
+    backgroundColor: 'white',
   },
   cellText: {
-    ...TYPOGRAPHY.montserrat.medium,
+    ...TYPOGRAPHY.montserrat.semiBold,
     fontSize: 13,
-    color: '#495057',
+    color: '#334155',
   },
   invoiceText: {
     ...TYPOGRAPHY.montserrat.bold,
@@ -426,103 +534,117 @@ const styles = StyleSheet.create({
   },
   totalText: {
     ...TYPOGRAPHY.montserrat.bold,
-    color: COLORS.black,
+    fontSize: 14,
   },
   cell: {
     justifyContent: 'center',
   },
   badge: {
     paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 6,
+    paddingVertical: 4,
+    borderRadius: 8,
     borderWidth: 1,
     alignSelf: 'flex-start',
   },
   badgeText: {
     ...TYPOGRAPHY.montserrat.bold,
-    fontSize: 11,
+    fontSize: 10,
+    textTransform: 'uppercase',
   },
   actionPickerContainer: {
-    width: 100,
-    height: 34,
-    borderRadius: 8,
+    width: 120,
+    height: 38,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#e9ecef',
-    backgroundColor: '#fff',
+    borderColor: '#E2E8F0',
+    backgroundColor: 'white', // Clean pure white
     overflow: 'hidden',
     justifyContent: 'center',
   },
   actionPicker: {
-    height: 34,
-    borderWidth: 0,
+    height: 38,
+    width: '100%',
+    color: '#1E293B', // High-contrast Slate text
     backgroundColor: 'transparent',
   },
-  actionIcon: {
-    width: 30,
-    height: 30,
-    borderRadius: 8,
-    backgroundColor: '#f8f9fa',
+  editIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: '#EEF2FF',
     justifyContent: 'center',
     alignItems: 'center',
   },
   loaderContainer: {
-    padding: 20,
+    padding: 60,
     alignItems: 'center',
   },
   loaderText: {
     ...TYPOGRAPHY.montserrat.medium,
-    marginTop: 6,
-    color: COLORS.greyText,
+    marginTop: 12,
+    color: '#64748B',
   },
   emptyContainer: {
-    padding: 40,
+    padding: 80,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  emptyIconCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#F1F5F9',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
   emptyText: {
     ...TYPOGRAPHY.montserrat.medium,
-    marginTop: 20,
-    color: COLORS.greyText,
-    fontSize: 16,
+    color: '#64748B',
+    fontSize: 15,
   },
   paginationContainer: {
+    backgroundColor: 'white',
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+    width: '100%',
+  },
+  paginationInner: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 10,
-    backgroundColor: '#f8f9fa',
-    borderTopWidth: 1,
-    borderTopColor: '#e9ecef',
+    width: '100%',
   },
   pageIndicator: {
     alignItems: 'center',
   },
   pageInfoText: {
-    ...TYPOGRAPHY.montserrat.medium,
+    ...TYPOGRAPHY.montserrat.bold,
     fontSize: 14,
-    color: COLORS.black,
+    color: '#1E293B',
   },
   totalRecordsText: {
-    ...TYPOGRAPHY.montserrat.regular,
+    ...TYPOGRAPHY.montserrat.medium,
     fontSize: 11,
-    color: COLORS.greyText,
+    color: '#64748B',
+    marginTop: 2,
   },
   pageButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.white,
-    paddingVertical: 8,
-    paddingHorizontal: 15,
-    borderRadius: 8,
+    backgroundColor: 'white',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#e9ecef',
+    borderColor: '#E2E8F0',
     gap: 8,
-    elevation: 1,
   },
   pageButtonDisabled: {
-    backgroundColor: '#f1f3f5',
-    borderColor: '#e9ecef',
-    elevation: 0,
+    backgroundColor: '#F8FAFC',
+    borderColor: '#F1F5F9',
   },
   pageButtonText: {
     ...TYPOGRAPHY.montserrat.bold,

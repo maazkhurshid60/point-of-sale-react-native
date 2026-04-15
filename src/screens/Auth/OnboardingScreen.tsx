@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, FlatList, Image, TouchableOpacity, StyleSheet, SafeAreaView, ViewToken, useWindowDimensions } from 'react-native';
+import { View, Text, FlatList, Image, TouchableOpacity, StyleSheet, ViewToken, useWindowDimensions } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useNavigation } from '@react-navigation/native';
 

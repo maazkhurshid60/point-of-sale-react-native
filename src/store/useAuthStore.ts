@@ -29,6 +29,11 @@ interface AuthState {
   currentShift: ShiftDetails | null;
   currentShiftData: any | null;
   cashAccounts: CashAccount[];
+  bankAccounts: BankAccount[];
+  creditCardAccounts: CreditCardAccount[];
+  selectedCashAccountId: number | null;
+  selectedBankAccountId: number | null;
+  selectedCreditCardAccountId: number | null;
 
   // Restaurant Table Management State
   currentFloor: FloorModel | null;
@@ -37,6 +42,14 @@ interface AuthState {
   listofdecorations: DecorationModel[];
   accountHeads: AccountHead[];
   purchaseOrders: POAccount[];
+  salesmanList: Salesman[];
+  selectedSalesman: Salesman | null;
+  selectedCashAccount: CashAccount | null;
+  selectedBankAccount: BankAccount | null;
+
+  setSelectedCashAccount: (account: CashAccount | null) => void;
+  setSelectedBankAccount: (account: BankAccount | null) => void;
+  updateDefaultCashAccount: (accountId: number) => Promise<boolean>;
 
   // Core Actions
   openShift: (storeId: number, amount: number, posId: string) => Promise<boolean>;
@@ -54,10 +67,13 @@ interface AuthState {
   fetchStoreOptions: () => Promise<Store[]>;
   fetchAccountHeads: () => Promise<AccountHead[]>;
   fetchPurchaseOrders: () => Promise<POAccount[]>;
+  fetchSalesman: () => Promise<Salesman[]>;
   addPOSExpense: (data: any) => Promise<boolean>;
   fetchDailyCashReports: () => Promise<any>;
   fetchCustomers: () => Promise<Customer[]>;
   addNewCustomer: (details: any) => Promise<boolean>;
+  fetchSoftwareSettings: () => Promise<void>;
+  fetchLeadSettings: () => Promise<void>;
 
   // Table Management Actions
   setCurrentFloor: (floor: FloorModel) => void;
@@ -66,6 +82,18 @@ interface AuthState {
   addTable: (floorId: number) => void;
   removeTable: (tableId: number) => void;
   updateTablePosition: (tableId: number, x: number, y: number) => void;
+  updateTableSize: (tableId: number, width: number, height: number) => void;
+  updateTableRotation: (tableId: number, rotation: number) => void;
+  toggleTableShape: (tableId: number) => void;
+  updateTableSelection: (tableId: number | null) => void;
+  updateTableName: (tableId: number, name: string) => void;
+  updateFloorName: (floorId: number, name: string) => void;
+  addChair: (tableId: number) => void;
+  removeChair: (tableId: number) => void;
+  addDecoration: (floorId: number) => void;
+  removeDecoration: (id: number) => void;
+  updateDecorationPosition: (id: number, x: number, y: number) => void;
+  updateDecorationSelection: (id: number | null) => void;
   clearAuthData: () => void;
 }
 
@@ -86,12 +114,49 @@ export const useAuthStore = create<AuthState>()(
       currentShift: null,
       currentShiftData: null,
       cashAccounts: [],
+      bankAccounts: [],
+      creditCardAccounts: [],
+      selectedCashAccountId: null,
+      selectedBankAccountId: null,
+      selectedCreditCardAccountId: null,
       currentFloor: null,
       listOfFloors: [],
       listOfTables: [],
       listofdecorations: [],
       accountHeads: [],
       purchaseOrders: [],
+      salesmanList: [],
+
+      selectedSalesman: null,
+      selectedCashAccount: null,
+      selectedBankAccount: null,
+
+      setSelectedCashAccount: (account: any) => set({ selectedCashAccount: account }),
+      setSelectedBankAccount: (account: any) => set({ selectedBankAccount: account }),
+
+      updateDefaultCashAccount: async (accountId: number) => {
+        try {
+          const { currentShift } = get();
+          if (!currentShift) return false;
+          
+          const res = await axiosClient.post(API_ENDPOINTS.TRANSACTIONS.UPDATE_CASH_ACCOUNT, {
+            shift_id: currentShift.shift_id,
+            default_cash_account: accountId
+          });
+
+          if (res.data?.success) {
+            const account = get().cashAccounts.find(a => a.id === accountId) || null;
+            set({ 
+              selectedCashAccount: account,
+              selectedCashAccountId: accountId 
+            });
+            return true;
+          }
+        } catch (e) {
+          console.error("Failed to update default cash account", e);
+        }
+        return false;
+      },
 
       setBaseURL: (url) => {
         set({ baseURL: url });
@@ -137,16 +202,30 @@ export const useAuthStore = create<AuthState>()(
                 require('../constants/permissions').staticPOSCustomerTablePermissionsList.includes(name)
               );
 
+            const shift = data.shift || data.result || data.data?.shift || null;
+            if (shift && !shift.shift_id && shift.id) {
+              shift.shift_id = shift.id;
+            }
+
             set({
               authToken: data.token,
               isUserLoggedIn: true,
               currentUser: data.user,
-              isShiftOpened: !!data.shift,
-              currentShift: data.shift || null,
-              currentStore: data.shift ? data.shift.store : null,
+              isShiftOpened: !!shift,
+              currentShift: shift,
+              currentStore: shift ? shift.store : null,
               permissions: mappedPermissions,
               customerTablePermissions: mappedCustomerTablePermissions
             });
+
+            // Parallel fetch to match Flutter's immediate post-login synchronization
+            await Promise.allSettled([
+              get().fetchSoftwareSettings(),
+              get().fetchLeadSettings(),
+              get().fetchCashAccounts(),
+              get().fetchBankAccounts(),
+              get().fetchSalesman(),
+            ]);
 
             return true;
           }
@@ -185,20 +264,41 @@ export const useAuthStore = create<AuthState>()(
 
       openShift: async (storeId, amount, posId) => {
         try {
-          // POST body matches Flutter's storeshift payload
           const res = await axiosClient.post(API_ENDPOINTS.SHIFT.OPEN, {
             store_id: storeId,
             amount: amount,
             pos_id: posId,
           });
 
-          if (res.data?.success || res.data?.result) {
-            const shiftData = res.data.result || res.data;
+          if (res.data?.success || res.data?.result || res.data?.shift) {
+            console.log("[openShift] API Success. Raw Response:", JSON.stringify(res.data));
+            // Find the shift object in priority order
+            const shiftData = res.data.shift || res.data.result || res.data.data?.shift || res.data;
+
+            // Ensure shift_id is present
+            if (!shiftData.shift_id && shiftData.id) {
+              shiftData.shift_id = shiftData.id;
+            }
+
+            console.log("[openShift] Mapped Shift Data:", JSON.stringify(shiftData));
+
             set({
               isShiftOpened: true,
               currentShift: shiftData,
-              currentShiftData: res.data // Store full details if available
+              currentShiftData: res.data,
+              currentStore: shiftData.store || get().currentStore
             });
+
+            console.log("Current Branch Store ID:", shiftData.store?.store_id || "No Store ID");
+
+            // Re-fetch essential data to sync state like Flutter's post-open signIn
+            await Promise.allSettled([
+              get().fetchSalesman(),
+              get().fetchCashAccounts(),
+              get().fetchBankAccounts(),
+              get().fetchShiftDetails(), // This will populate currentShiftData with full details
+            ]);
+
             return true;
           }
           return false;
@@ -242,12 +342,17 @@ export const useAuthStore = create<AuthState>()(
       fetchShiftDetails: async () => {
         try {
           const { currentShift } = get();
-          if (!currentShift) return null;
+          if (!currentShift || !currentShift.shift_id) return null;
           const res = await axiosClient.get(API_ENDPOINTS.SHIFT.DETAILS, {
             params: { shift_id: currentShift.shift_id }
           });
           if (res.data?.success) {
-            set({ currentShiftData: res.data });
+            const shiftData = res.data.result || res.data.shift;
+            set({
+              currentShiftData: res.data,
+              // If the fetch returns store info (often in result.store), sync it
+              currentStore: shiftData?.store || get().currentStore
+            });
             return res.data;
           }
           return null;
@@ -318,25 +423,30 @@ export const useAuthStore = create<AuthState>()(
       },
 
       updateCashAccount: async (cashAccName: string, cashAccId: number) => {
-        try {
-          const { currentShift } = get();
-          if (!currentShift) return false;
-          const res = await axiosClient.post(API_ENDPOINTS.TRANSACTIONS.UPDATE_CASH_ACCOUNT, {
-            shift_id: currentShift.shift_id,
-            default_cash_account: cashAccId
-          });
-          return !!res.data?.success;
-        } catch (e) { console.error(e); return false; }
+        return get().updateDefaultCashAccount(cashAccId);
       },
 
       updateSalesman: async (salesmanName: string, salesmanId: number) => {
         try {
-          const { currentShift } = get();
+          const { currentShift, salesmanList } = get();
           if (!currentShift) return false;
           const res = await axiosClient.post(API_ENDPOINTS.TRANSACTIONS.UPDATE_SALESMAN, null, {
             params: { shift_id: currentShift.shift_id, salesman_id: salesmanId }
           });
-          return !!res.data?.success;
+
+          if (res.data?.success) {
+            const selected = salesmanList.find(s => s.user_id === salesmanId) || { user_id: salesmanId, name: salesmanName };
+            set((state) => ({
+              selectedSalesman: selected,
+              currentShift: state.currentShift ? {
+                ...state.currentShift,
+                salesman_id: salesmanId,
+                salesman_name: salesmanName
+              } : null
+            }));
+            return true;
+          }
+          return false;
         } catch (e) { console.error(e); return false; }
       },
 
@@ -347,7 +457,19 @@ export const useAuthStore = create<AuthState>()(
       fetchBankAccounts: async () => {
         try {
           const res = await axiosClient.get(API_ENDPOINTS.CATALOG.BANK_ACCOUNTS);
-          return res.data?.success ? res.data.accounts : [];
+          const accounts = res.data?.success ? res.data.accounts : [];
+          
+          const shiftDefaultId = get().currentShift?.default_bank_account;
+          const shiftDefaultAcc = accounts.find((a: any) => a.id === shiftDefaultId);
+          
+          const selectedAcc = shiftDefaultAcc || (accounts.length > 0 ? accounts[0] : null);
+
+          set({
+            bankAccounts: accounts,
+            selectedBankAccountId: selectedAcc?.id || null,
+            selectedBankAccount: selectedAcc
+          });
+          return accounts;
         } catch (e) { console.error(e); return []; }
       },
 
@@ -355,7 +477,17 @@ export const useAuthStore = create<AuthState>()(
         try {
           const res = await axiosClient.get(API_ENDPOINTS.CATALOG.CASH_ACCOUNTS);
           const accounts = res.data?.success ? res.data.accounts : [];
-          set({ cashAccounts: accounts });
+          
+          const shiftDefaultId = get().currentShift?.default_cash_account;
+          const shiftDefaultAcc = accounts.find((a: any) => a.id === shiftDefaultId);
+          
+          const selectedAcc = shiftDefaultAcc || (accounts.length > 0 ? accounts[0] : null);
+          
+          set({
+            cashAccounts: accounts,
+            selectedCashAccountId: selectedAcc?.id || null,
+            selectedCashAccount: selectedAcc
+          });
           return accounts;
         } catch (e) { console.error(e); return []; }
       },
@@ -363,7 +495,14 @@ export const useAuthStore = create<AuthState>()(
       fetchCreditCardAccounts: async () => {
         try {
           const res = await axiosClient.get(API_ENDPOINTS.CATALOG.CREDIT_CARD_ACCOUNTS);
-          return res.data?.success ? res.data.accounts : [];
+          const accounts = res.data?.success ? res.data.accounts : [];
+          const firstAccount = accounts.length > 0 ? accounts[0] : null;
+          set({
+            creditCardAccounts: accounts,
+            selectedCreditCardAccountId: firstAccount?.id || null
+            // Add if needed: selectedCreditCardAccount: firstAccount
+          });
+          return accounts;
         } catch (e) { console.error(e); return []; }
       },
 
@@ -389,6 +528,21 @@ export const useAuthStore = create<AuthState>()(
           const pos = res.data?.success ? res.data.purchaseOrders : [];
           set({ purchaseOrders: pos });
           return pos;
+        } catch (e) { console.error(e); return []; }
+      },
+
+      fetchSalesman: async () => {
+        try {
+          const res = await axiosClient.get(API_ENDPOINTS.SHIFT.SALES_MAN);
+          const salesmen = res.data?.success ? res.data.saleman : [];
+          const { currentShift } = get();
+
+          let selected = null;
+          if (currentShift?.salesman_id) {
+            selected = salesmen.find((s: Salesman) => s.user_id === currentShift.salesman_id) || null;
+          }
+          set({ salesmanList: salesmen, selectedSalesman: selected });
+          return salesmen;
         } catch (e) { console.error(e); return []; }
       },
 
@@ -439,11 +593,38 @@ export const useAuthStore = create<AuthState>()(
 
       addNewCustomer: async (details) => {
         try {
-          const res = await axiosClient.post(API_ENDPOINTS.CATALOG.CUSTOMERS, details);
+          // As per user request, using /api/addcustomer with params for POST
+          const res = await axiosClient.post(API_ENDPOINTS.CATALOG.ADD_CUSTOMER, null, {
+            params: details
+          });
           return !!res.data?.success;
         } catch (e) {
           console.error(e);
           return false;
+        }
+      },
+
+      fetchSoftwareSettings: async () => {
+        try {
+          const res = await axiosClient.get(API_ENDPOINTS.SETTINGS.SOFTWARE);
+          if (res.data?.success && res.data?.settings) {
+            // Logic follows Flutter AuthController: uses first index of settings list
+            const settings = res.data.settings[0];
+            set({ softwareSettings: settings });
+          }
+        } catch (e) {
+          console.error("Fetch Software Settings Error:", e);
+        }
+      },
+
+      fetchLeadSettings: async () => {
+        try {
+          const res = await axiosClient.get(API_ENDPOINTS.SETTINGS.LEADS);
+          if (res.data?.success && res.data?.settings) {
+            set({ leadSettings: res.data.settings });
+          }
+        } catch (e) {
+          console.error("Fetch Lead Settings Error:", e);
         }
       },
 
@@ -473,8 +654,8 @@ export const useAuthStore = create<AuthState>()(
           tableId: Date.now(),
           tableName: `Table ${listOfTables.length + 1}`,
           floorid: floorId,
-          x: 50,
-          y: 50,
+          x: 50 + Math.random() * 100,
+          y: 50 + Math.random() * 100,
           width: 80,
           height: 80,
           isRounded: false,
@@ -495,6 +676,118 @@ export const useAuthStore = create<AuthState>()(
           listOfTables: state.listOfTables.map((t) =>
             t.tableId === tableId ? { ...t, x, y } : t
           ),
+        }));
+      },
+      updateTableSize: (tableId, width, height) => {
+        set((state) => ({
+          listOfTables: state.listOfTables.map((t) =>
+            t.tableId === tableId ? { ...t, width, height } : t
+          ),
+        }));
+      },
+      updateTableRotation: (tableId, rotation) => {
+        set((state) => ({
+          listOfTables: state.listOfTables.map((t) =>
+            t.tableId === tableId ? { ...t, rotation } : t
+          ),
+        }));
+      },
+      toggleTableShape: (tableId) => {
+        set((state) => ({
+          listOfTables: state.listOfTables.map((t) =>
+            t.tableId === tableId ? { ...t, isRounded: !t.isRounded } : t
+          ),
+        }));
+      },
+      updateTableSelection: (tableId) => {
+        set((state) => ({
+          listOfTables: state.listOfTables.map((t) => ({
+            ...t,
+            isSelected: t.tableId === tableId,
+          })),
+        }));
+      },
+      updateTableName: (tableId, name) => {
+        set((state) => ({
+          listOfTables: state.listOfTables.map((t) =>
+            t.tableId === tableId ? { ...t, tableName: name } : t
+          ),
+        }));
+      },
+      updateFloorName: (floorId, name) => {
+        set((state) => ({
+          listOfFloors: state.listOfFloors.map((f) =>
+            f.floorId === floorId ? { ...f, floorName: name } : f
+          ),
+          currentFloor: state.currentFloor?.floorId === floorId
+            ? { ...state.currentFloor, floorName: name }
+            : state.currentFloor
+        }));
+      },
+      addChair: (tableId) => {
+        set((state) => ({
+          listOfTables: state.listOfTables.map((t) => {
+            if (t.tableId !== tableId || t.chairsCount >= 16) return t;
+            const newChairs = [...t.listofChairs];
+            // Find side with fewest chairs
+            let sideIndex = 0;
+            let minChairs = newChairs[0];
+            for (let i = 1; i < 4; i++) {
+              if (newChairs[i] < minChairs) {
+                minChairs = newChairs[i];
+                sideIndex = i;
+              }
+            }
+            newChairs[sideIndex] += 1;
+            return { ...t, listofChairs: newChairs, chairsCount: t.chairsCount + 1 };
+          }),
+        }));
+      },
+      removeChair: (tableId) => {
+        set((state) => ({
+          listOfTables: state.listOfTables.map((t) => {
+            if (t.tableId !== tableId || t.chairsCount === 0) return t;
+            const newChairs = [...t.listofChairs];
+            const sideIndex = newChairs.findIndex(c => c > 0);
+            if (sideIndex !== -1) {
+              newChairs[sideIndex] -= 1;
+            }
+            return { ...t, listofChairs: newChairs, chairsCount: Math.max(0, t.chairsCount - 1) };
+          }),
+        }));
+      },
+      addDecoration: (floorId) => {
+        const { listofdecorations } = get();
+        const newDeco: DecorationModel = {
+          id: Date.now(),
+          floor: floorId,
+          title: "Leaf",
+          x: 50 + Math.random() * 100,
+          y: 50 + Math.random() * 100,
+          width: 50,
+          height: 50,
+          isSelected: false,
+        };
+        set({ listofdecorations: [...listofdecorations, newDeco] });
+      },
+      removeDecoration: (id) => {
+        set((state) => ({
+          listofdecorations: state.listofdecorations.filter((d) => d.id !== id),
+        }));
+      },
+      updateDecorationPosition: (id, x, y) => {
+        set((state) => ({
+          listofdecorations: state.listofdecorations.map((d) =>
+            d.id === id ? { ...d, x, y } : d
+          ),
+        }));
+      },
+      updateDecorationSelection: (id) => {
+        set((state) => ({
+          listofdecorations: state.listofdecorations.map((d) => ({
+            ...d,
+            isSelected: d.id === id,
+          })),
         }));
       },
 

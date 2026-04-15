@@ -13,6 +13,7 @@ import { useUIStore } from '../../store/useUIStore';
 import { COLORS } from '../../constants/colors';
 import { TYPOGRAPHY } from '../../constants/typography';
 import { FontAwesome6 } from '@expo/vector-icons';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface CloseShiftDialogProps {
   onConfirm?: (amount: number) => void;
@@ -24,6 +25,7 @@ export default function CloseShiftDialog({ onConfirm, onClose }: CloseShiftDialo
   const isPortrait = height > width;
 
   const closeShift = useAuthStore((state) => state.closeShift);
+  const queryClient = useQueryClient();
   const [amount, setAmount] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -34,6 +36,10 @@ export default function CloseShiftDialog({ onConfirm, onClose }: CloseShiftDialo
       setIsSubmitting(false);
 
       if (success) {
+        // Clear all shift data from cache
+        await queryClient.invalidateQueries({ queryKey: ['shiftDetails'] });
+        await queryClient.invalidateQueries({ queryKey: ['shift'] });
+
         useUIStore.getState().setScreen('DEFAULT');
         if (onConfirm) onConfirm(parseFloat(amount) || 0);
         onClose();

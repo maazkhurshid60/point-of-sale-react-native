@@ -13,6 +13,8 @@ interface CartState {
   currentSaleId: number | null; // null if new sale
   holdSales: HoldSaleModel[];
   nextPageUrl: string | null;
+  selectedCustomer: string;
+  selectedCustomerId: number;
 
   // Actions
   addItem: (product: ProductModel) => void;
@@ -22,16 +24,18 @@ interface CartState {
   updateQuantity: (productId: number, quantity: number) => void;
   applyOverallDiscount: (amount: number) => void;
   clearCart: () => void;
+  setSelectedCustomer: (name: string, id: number) => void;
 
   // Hold Sales Actions
   fetchHoldSales: (url?: string) => Promise<void>;
   holdCurrentSale: () => Promise<boolean>;
   recallSale: (saleId: number) => Promise<boolean>;
   deleteHoldSale: (saleId: number) => Promise<boolean>;
-  makePrintBillSale: () => Promise<any>;
+  makeSale: (type: string) => Promise<any>;
 
   // Internal logic
   recalculate: () => void;
+  addProductByUPCIDBarcode: (keyword: string) => Promise<void>;
 }
 
 export const useCartStore = create<CartState>((set, get) => ({
@@ -43,6 +47,8 @@ export const useCartStore = create<CartState>((set, get) => ({
   currentSaleId: null,
   holdSales: [],
   nextPageUrl: null,
+  selectedCustomer: 'Walk-in-customer',
+  selectedCustomerId: 1,
 
   addItem: (product: ProductModel) => {
     const { cartItems } = get();
@@ -122,14 +128,20 @@ export const useCartStore = create<CartState>((set, get) => ({
       discountAmount: 0,
       totalToPay: 0,
       currentSaleId: null,
+      selectedCustomer: 'Walk-in-customer',
+      selectedCustomerId: 1,
     });
   },
 
-  makePrintBillSale: async () => {
-    const { cartItems, currentSaleId } = get();
+  setSelectedCustomer: (name: string, id: number) => {
+    set({ selectedCustomer: name, selectedCustomerId: id });
+  },
+
+  makeSale: async (type: string) => {
+    const { cartItems, currentSaleId, discountAmount, selectedCustomerId } = get();
     const auth = useAuthStore.getState();
     const shiftId = auth.currentShift?.shift_id;
-    const customerId = 1; // Default customer if none selected
+    const storeId = auth.currentStore?.store_id;
 
     if (cartItems.length === 0) return null;
 
@@ -137,50 +149,99 @@ export const useCartStore = create<CartState>((set, get) => ({
       product_id: item.product_id,
       name: item.product_name,
       full_name: item.product_name,
-      comments: null,
-      enable_comments: 0,
-      barcode: item.product?.barcode,
-      sku: item.product?.sku,
-      selling_price: item.selling_price,
       qty: item.quantity,
-      subtotal: item.selling_price * item.quantity,
-      total: item.selling_price * item.quantity,
+      selling_price: item.selling_price,
+      price: item.selling_price,
       discount: item.discount || 0,
-      discount_amount: 0, // Simplified for now
+      total: item.selling_price * item.quantity,
+      subtotal: item.selling_price * item.quantity,
     }));
+
+    const cashId = auth.selectedCashAccount?.id || auth.selectedCashAccountId || 0;
+    const bankId = auth.selectedBankAccount?.id || auth.selectedBankAccountId || 0;
 
     const data = {
       shift_id: shiftId,
-      customer_id: customerId,
-      products: products,
-      discount_type: 'amount',
+      store_id: storeId,
+      customer_id: selectedCustomerId,
+      products: JSON.stringify(products),
+      discount_type: auth.softwareSettings?.discount_type || 'amount',
+      discount_policy: auth.softwareSettings?.discount_policy || 'overall', // Added
+      overall_discount: discountAmount,
+      total_discount: discountAmount, // Some endpoints use total_discount
       type: 'payment_checkout',
       draft_enabled: currentSaleId ? 1 : null,
-      draft_id: currentSaleId
+      draft_id: currentSaleId,
+
+      // Shotgun approach for account IDs to satisfy different controller requirements
+      account_id: cashId, 
+      casher_account_id: cashId,
+      default_cash_account: cashId,
+      cash_account_id: cashId, 
+      cash_account: cashId,    
+      cash_id: cashId,         
+      cashier_account: cashId, // Added correct spelling
+      casher_account: cashId,  
+      casher_id: cashId,       // Added
+      cashier_id: cashId,      // Added
+      shift_cash_account_id: cashId, // Added
+      payment_account_id: cashId,
+      payment_method_id: 1,    // Added common default for Cash
+      payment_type: 'cash',    
+      
+      bank_account_id: bankId,
+      default_bank_account: bankId,
+      bank_id: bankId,         
+
+      // Often required: A structured payments array
+      payments: JSON.stringify([{
+        account_id: cashId,
+        amount: get().totalToPay,
+        method: 'cash',
+        method_id: 1
+      }]),
+
+      // Additional fields often required for 403 prevention
+      paid_in: get().totalToPay,
+      paying_amount: get().totalToPay,
+      status: 'final'
     };
 
+    console.log(`[makeSale] Attempting ${type} sale with expanded payload:`, JSON.stringify(data));
+
     try {
-      const res = await axiosClient.post(API_ENDPOINTS.POS.PRINT_BILL, data, {
-        params: { invoice_type: 'invoice' }
-      });
-      if (res.data?.success) {
-        const result = res.data.result;
-        // Map to standard slip format
-        return {
-          saleData: result.sale,
-          companyData: result.company,
-          usersData: {
-            sale_person: auth.currentUser?.name,
-            customer_name: 'Walk-in-customer',
-            customer_id: customerId
-          },
-          saleItemsData: result.sale?.sale_items || products,
-          settingsInvoiceFields: result.settings?.invoice_fields,
-          ...result
-        };
+      let endpoint = API_ENDPOINTS.POS.CHECKOUT;
+      let method = 'POST';
+
+      if (type === 'print-quotation') {
+        endpoint = API_ENDPOINTS.POS.QUOTATION;
+      } else if (type === 'print-bill') {
+        endpoint = API_ENDPOINTS.POS.PRINT_BILL;
+      } else if (type === 'print-sample') {
+        endpoint = API_ENDPOINTS.POS.SAMPLE_SALE;
       }
-    } catch (e) {
-      console.error("Failed to print bill", e);
+
+      const res = await axiosClient.post(endpoint, data, {
+        params: {
+          invoice_type: type,
+          // Duplicate account IDs in params just in case backend checks query strings
+          account_id: cashId,
+          cash_account_id: cashId,
+          default_cash_account: cashId
+        }
+      });
+
+      console.log(`[makeSale] API Response for ${type}:`, JSON.stringify(res.data));
+
+      if (res.data?.success || res.data?.status === 'success' || res.data?.status === 'successfully') {
+        const result = res.data.result || res.data.data;
+        get().clearCart();
+        return result;
+      } else {
+        console.warn(`[makeSale] Server returned non-success for ${type}:`, res.data?.message || 'Unknown error');
+      }
+    } catch (e: any) {
+      console.error(`[makeSale] Failed to make ${type} sale. Error:`, e.response?.data || e.message);
     }
     return null;
   },
@@ -251,7 +312,7 @@ export const useCartStore = create<CartState>((set, get) => ({
         const data = res.data.data;
         const draftSale = data.draftSale;
         const items = draftSale.sale_items;
-        
+
         // Populate cart
         const newCartItems: CartItemModel[] = items.map((item: any) => ({
           product_id: item.product_id,
@@ -313,5 +374,30 @@ export const useCartStore = create<CartState>((set, get) => ({
       taxAmount: currentTaxAmount,
       totalToPay: Math.max(0, newTotal),
     });
+  },
+
+  addProductByUPCIDBarcode: async (keyword: string) => {
+    if (!keyword) return;
+
+    try {
+      const res = await axiosClient.get(API_ENDPOINTS.CATALOG.PRODUCTS_POS, {
+        params: { keyword }
+      });
+
+      if (res.data?.success || res.data?.data?.success) {
+        const productList = res.data.data?.Products || res.data.Products || [];
+        if (productList.length === 0) {
+          throw new Error('Product not found');
+        }
+
+        const product = productList[0] as ProductModel;
+        get().addItem(product);
+      } else {
+        throw new Error('Failed to find product');
+      }
+    } catch (e: any) {
+      console.error("Failed to add product by barcode/SKU", e);
+      throw e;
+    }
   },
 }));

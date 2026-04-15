@@ -27,7 +27,8 @@ const AddCustomerScreen: React.FC = () => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    contact_no: '',
+    mobile: '',
+    opening_balance: '0',
     company_name: '',
     company_email: '',
     company_website: '',
@@ -37,20 +38,31 @@ const AddCustomerScreen: React.FC = () => {
 
   const validate = () => {
     const newErrors: any = {};
-    if (!formData.name) newErrors.name = 'Name is required';
-    if (!formData.contact_no) newErrors.contact_no = 'Contact number is required';
-    
+    if (!formData.name) newErrors.name = 'Full name is required';
+    if (!formData.mobile) newErrors.mobile = 'Mobile number is required';
+
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (formData.email && !emailRegex.test(formData.email)) {
       newErrors.email = 'Invalid email address';
     }
-    
+
+    if (formData.company_email && !emailRegex.test(formData.company_email)) {
+      newErrors.company_email = 'Invalid company email address';
+    }
+
+    if (isNaN(Number(formData.opening_balance))) {
+      newErrors.opening_balance = 'Opening balance must be a number';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async () => {
-    if (!validate()) return;
+    if (!validate()) {
+      Alert.alert("Validation Error", "Please correct the errors before saving.");
+      return;
+    }
 
     setIsLoading(true);
     const success = await addNewCustomer(formData);
@@ -61,7 +73,8 @@ const AddCustomerScreen: React.FC = () => {
       setFormData({
         name: '',
         email: '',
-        contact_no: '',
+        mobile: '',
+        opening_balance: '0',
         company_name: '',
         company_email: '',
         company_website: '',
@@ -100,7 +113,7 @@ const AddCustomerScreen: React.FC = () => {
   );
 
   return (
-    <KeyboardAvoidingView 
+    <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={styles.container}
     >
@@ -109,20 +122,21 @@ const AddCustomerScreen: React.FC = () => {
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-             <FontAwesome6 name="user-large" size={16} color={COLORS.primary} />
-             <Text style={styles.sectionTitle}>Personal Details</Text>
+            <FontAwesome6 name="user-large" size={16} color={COLORS.primary} />
+            <Text style={styles.sectionTitle}>Personal Details</Text>
           </View>
           <View style={styles.formGrid}>
             {renderInputField("Full Name", formData.name, "name", "John Doe", "default", true)}
-            {renderInputField("Contact No", formData.contact_no, "contact_no", "0312XXXXXXX", "phone-pad", true)}
+            {renderInputField("Mobile No", formData.mobile, "mobile", "0312XXXXXXX", "phone-pad", true)}
             {renderInputField("Email Address", formData.email, "email", "john@example.com", "email-address")}
+            {/* {renderInputField("Opening Balance", formData.opening_balance, "opening_balance", "0", "numeric")} */}
           </View>
         </View>
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-             <FontAwesome6 name="building" size={16} color={COLORS.primary} />
-             <Text style={styles.sectionTitle}>Company Details (Optional)</Text>
+            <FontAwesome6 name="building" size={16} color={COLORS.primary} />
+            <Text style={styles.sectionTitle}>Company Details (Optional)</Text>
           </View>
           <View style={styles.formGrid}>
             {renderInputField("Company Name", formData.company_name, "company_name", "Acme Corp")}
@@ -131,8 +145,8 @@ const AddCustomerScreen: React.FC = () => {
           </View>
         </View>
 
-        <Pressable 
-          style={[styles.submitBtn, isLoading && styles.submitBtnDisabled]} 
+        <Pressable
+          style={[styles.submitBtn, isLoading && styles.submitBtnDisabled]}
           onPress={handleSubmit}
           disabled={isLoading}
         >
@@ -145,7 +159,7 @@ const AddCustomerScreen: React.FC = () => {
             </>
           )}
         </Pressable>
-        
+
         <View style={{ height: 100 }} />
       </ScrollView>
     </KeyboardAvoidingView>
