@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -14,7 +14,7 @@ import { useCartStore } from '../../store/useCartStore';
 import { useUIStore } from '../../store/useUIStore';
 import { COLORS } from '../../constants/colors';
 import { Customer } from '../../models';
-
+import { useAuthStore } from '../../store/useAuthStore';
 interface CustomerDialogProps {
   onSelect?: (customer: Customer) => void;
   onClose: () => void;
@@ -24,20 +24,37 @@ export default function CustomerDialog({ onSelect, onClose }: CustomerDialogProp
   const { width, height } = useWindowDimensions();
   const isPortrait = height > width;
 
-  const { data: customers, isLoading } = useCustomers();
+  const { data: initialCustomers, isLoading: initialLoading } = useCustomers();
+  const searchCustomers = useAuthStore((state) => state.searchCustomers);
   const setSelectedCustomer = useCartStore((state) => state.setSelectedCustomer);
   const setScreen = useUIStore((state) => state.setScreen);
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
 
-  const filteredCustomers = useMemo(() => {
-    if (!customers) return [];
-    return customers.filter(
-      (c) =>
-        c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (c.mobile && c.mobile.includes(searchQuery))
-    );
-  }, [customers, searchQuery]);
+  // Initial load sync
+  useEffect(() => {
+    if (initialCustomers) {
+      setSearchResults(initialCustomers);
+    }
+  }, [initialCustomers]);
+
+  // Debounced server search
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(async () => {
+      if (searchQuery.trim()) {
+        setIsSearching(true);
+        const results = await searchCustomers(searchQuery);
+        setSearchResults(results);
+        setIsSearching(false);
+      } else if (initialCustomers) {
+        setSearchResults(initialCustomers);
+      }
+    }, 300);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchQuery, searchCustomers, initialCustomers]);
 
   const handleSelect = (customer: Customer) => {
     setSelectedCustomer(customer.name, customer.customer_id);
@@ -68,20 +85,28 @@ export default function CustomerDialog({ onSelect, onClose }: CustomerDialogProp
       />
 
       <View style={styles.listContainer}>
-        {isLoading ? (
+        {initialLoading || isSearching ? (
           <ActivityIndicator color={COLORS.primary} style={{ marginTop: 20 }} />
         ) : (
           <FlatList
-            data={filteredCustomers}
-            keyExtractor={(item) => item.customer_id.toString()}
+            data={searchResults}
+            keyExtractor={(item, index) => item.customer_id?.toString() || index.toString()}
             renderItem={({ item }) => (
               <TouchableOpacity
                 style={styles.customerItem}
                 onPress={() => handleSelect(item)}
               >
-                <View>
-                  <Text style={styles.customerName}>{item.name}</Text>
-                  {item.mobile && <Text style={styles.customerMobile}>{item.mobile}</Text>}
+                <View style={styles.customerRow}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.customerName}>{item.name}</Text>
+                    {item.company_name && <Text style={styles.customerCompany}>{item.company_name}</Text>}
+                    {item.mobile && <Text style={styles.customerMobile}>{item.mobile}</Text>}
+                  </View>
+                  {item.balance && (
+                    <View style={styles.balanceContainer}>
+                      <Text style={styles.balanceText}>{item.balance}</Text>
+                    </View>
+                  )}
                 </View>
               </TouchableOpacity>
             )}
@@ -148,16 +173,40 @@ const styles = StyleSheet.create({
     borderBottomColor: 'rgba(142, 142, 142, 0.1)',
   },
   customerName: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
-    color: '#7b1fa2',
+    color: '#374151',
     fontFamily: 'Montserrat',
   },
-  customerMobile: {
+  customerCompany: {
     fontSize: 12,
     color: '#6b7280',
     fontFamily: 'Montserrat',
+    marginTop: 1,
+  },
+  customerMobile: {
+    fontSize: 12,
+    color: '#4b5563',
+    fontFamily: 'Montserrat',
     marginTop: 2,
+    fontWeight: '500',
+  },
+  customerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  balanceContainer: {
+    backgroundColor: '#f3f4f6',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  balanceText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: COLORS.primary,
+    fontFamily: 'Montserrat',
   },
   emptyText: {
     textAlign: 'center',

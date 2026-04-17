@@ -15,6 +15,7 @@ export type AppScreen =
   | 'EDIT_ORDER'
   | 'PROFILE'
   | 'POS_SETTINGS'
+  | 'RESTAURANT_FLOORS'
   | 'RESTAURANT_TABLES'
   | 'ORDER_REVIEW'
   | 'POS_EXPENSE'

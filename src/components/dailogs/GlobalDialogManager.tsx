@@ -15,6 +15,7 @@ import GoodsIssuanceSlipDialog from './GoodsIssuanceSlipDialog';
 import SampleSaleSlipDialog from './SampleSaleSlipDialog';
 import QuotationDialog from './QuotationDialog';
 import RawBillPrintDialog from './RawBillPrintDialog';
+import TicketDialog from './TicketDialog';
 import AddProductByDialog from './AddProductByDialog';
 import ScanBarcodeForWebDialog from './ScanBarcodeForWebDialog';
 import SalesmanDialog from './SalesmanDialog';
@@ -37,6 +38,7 @@ const DialogComponents: Partial<Record<DialogType, any>> = {
   SAMPLE_SALE_SLIP: SampleSaleSlipDialog,
   QUOTATION_SLIP: QuotationDialog,
   RAW_BILL_SLIP: RawBillPrintDialog,
+  TICKET_SLIP: TicketDialog,
   ADD_PRODUCT_BY: AddProductByDialog,
   SCAN_BARCODE_WEB: ScanBarcodeForWebDialog,
   SALESMAN_SELECTION: SalesmanDialog,
@@ -66,15 +68,22 @@ export default function GlobalDialogManager() {
       onRequestClose={isDismissable ? hideDialog : undefined}
       statusBarTranslucent
     >
-      <TouchableWithoutFeedback onPress={isDismissable ? hideDialog : undefined}>
-        <View style={styles.overlay}>
-          <TouchableWithoutFeedback>
-            <View style={styles.container}>
-              <ActiveComponent {...dialogProps} onClose={hideDialog} />
-            </View>
+      {/* 
+        Pattern: Absolute backdrop (handles dismiss tap) + independent dialog container.
+        This avoids ALL gesture responder conflicts with ScrollViews inside dialog content.
+      */}
+      <View style={styles.overlay}>
+        {/* Backdrop — tapping it dismisses the dialog */}
+        {isDismissable && (
+          <TouchableWithoutFeedback onPress={hideDialog}>
+            <View style={StyleSheet.absoluteFillObject} />
           </TouchableWithoutFeedback>
+        )}
+        {/* Dialog content — no gesture wrappers, ScrollView works freely */}
+        <View style={styles.container} pointerEvents="box-none">
+          <ActiveComponent {...dialogProps} onClose={hideDialog} />
         </View>
-      </TouchableWithoutFeedback>
+      </View>
     </Modal>
   );
 }

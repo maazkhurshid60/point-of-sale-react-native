@@ -11,15 +11,19 @@ import {
   useWindowDimensions,
   KeyboardAvoidingView,
   Platform,
+  TouchableOpacity,
 } from 'react-native';
 import { FontAwesome6 } from '@expo/vector-icons';
+import { Picker } from '@react-native-picker/picker';
 import { useAuthStore } from '../../store/useAuthStore';
 import { COLORS } from '../../constants/colors';
 import { TYPOGRAPHY } from '../../constants/typography';
+import { useUIStore } from '../../store/useUIStore';
 
 const AddCustomerScreen: React.FC = () => {
   const { width } = useWindowDimensions();
   const isTablet = width > 768;
+  const setScreen = useUIStore((state) => state.setScreen);
 
   const addNewCustomer = useAuthStore((state) => state.addNewCustomer);
 
@@ -32,6 +36,19 @@ const AddCustomerScreen: React.FC = () => {
     company_name: '',
     company_email: '',
     company_website: '',
+    cnic: "",
+    street: "",
+    postal: "",
+    city: "",
+    province: "",
+    country: "",
+    tax_number: "",
+    car_number: "",
+    car_milage: "",
+    remarks: "",
+    status: 'active',
+    category: 'physical',
+    customer_type: 'Regular',
   });
 
   const [errors, setErrors] = useState<any>({});
@@ -60,15 +77,15 @@ const AddCustomerScreen: React.FC = () => {
 
   const handleSubmit = async () => {
     if (!validate()) {
-      Alert.alert("Validation Error", "Please correct the errors before saving.");
+      Alert.alert("Please Fill the Required Fields", "Please correct the errors before saving.");
       return;
     }
 
     setIsLoading(true);
-    const success = await addNewCustomer(formData);
+    const result = await addNewCustomer(formData);
     setIsLoading(false);
 
-    if (success) {
+    if (result.success) {
       Alert.alert("Success", "Customer added successfully!");
       setFormData({
         name: '',
@@ -78,19 +95,37 @@ const AddCustomerScreen: React.FC = () => {
         company_name: '',
         company_email: '',
         company_website: '',
+        cnic: "",
+        street: "",
+        postal: "",
+        city: "",
+        province: "",
+        country: "",
+        tax_number: "",
+        car_number: "",
+        car_milage: "",
+        remarks: "",
+        status: 'active',
+        category: 'physical',
+        customer_type: 'Regular',
       });
       setErrors({});
     } else {
-      Alert.alert("Error", "Failed to add customer. Please try again.");
+      Alert.alert("Error", result.message || "Failed to add customer. Please try again.");
     }
   };
 
   const renderHeader = () => (
     <View style={styles.header}>
-      <View>
-        <Text style={styles.breadcrumb}>Dashboard / <Text style={{ color: COLORS.primary }}>Customers</Text></Text>
-        <Text style={styles.title}>Add New Customer</Text>
-      </View>
+      <TouchableOpacity style={{ flexDirection: "row", gap: 10, alignItems: "center" }} onPress={() => setScreen('POS_BILLING')}>
+        <FontAwesome6 style={{
+          backgroundColor: COLORS.primary,
+          padding: 10,
+          borderRadius: 100
+        }} name="arrow-left" size={24} color={COLORS.white} />
+        <Text style={styles.title}>Customers</Text>
+      </TouchableOpacity>
+
     </View>
   );
 
@@ -112,6 +147,30 @@ const AddCustomerScreen: React.FC = () => {
     </View>
   );
 
+  const renderPickerField = (label: string, value: string, field: string, options: { label: string, value: string }[], required: boolean = false) => (
+    <View style={[styles.inputGroup, { width: isTablet ? '48%' : '100%' }]}>
+      <View style={styles.labelRow}>
+        <Text style={styles.label}>{label}</Text>
+        {required && <Text style={styles.requiredStar}>*</Text>}
+      </View>
+      <View style={[styles.input, { paddingHorizontal: 0, justifyContent: 'center', overflow: 'hidden' }, errors[field] && styles.inputError]}>
+        <Picker
+          selectedValue={value}
+          onValueChange={(itemValue) => setFormData({ ...formData, [field]: itemValue })}
+          style={{ width: '100%', marginLeft: Platform.OS === 'ios' ? 0 : 8 }}
+          mode="dropdown"
+          dropdownIconColor="transparent"
+        >
+          {options.map(option => (
+            <Picker.Item key={option.value} label={option.label} value={option.value} color={COLORS.black} style={{ backgroundColor: COLORS.white }} />
+          ))}
+        </Picker>
+
+      </View>
+      {errors[field] && <Text style={styles.errorText}>{errors[field]}</Text>}
+    </View>
+  );
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -129,6 +188,41 @@ const AddCustomerScreen: React.FC = () => {
             {renderInputField("Full Name", formData.name, "name", "John Doe", "default", true)}
             {renderInputField("Mobile No", formData.mobile, "mobile", "0312XXXXXXX", "phone-pad", true)}
             {renderInputField("Email Address", formData.email, "email", "john@example.com", "email-address")}
+            {renderInputField("CNIC No", formData.cnic, "cnic", "1234567890123", "numeric")}
+            {renderInputField("Street", formData.street, "street", "Enter your street", "default")}
+            {renderInputField("City", formData.city, "city", "Enter your city", "default")}
+            {renderInputField("Opening Balance", formData.opening_balance, "opening_balance", "0", "numeric")}
+            {renderInputField("Car Number", formData.car_number, "car_number", "Enter your car number", "default")}
+            {renderInputField("Car Milage", formData.car_milage, "car_milage", "Enter your car milage", "numeric")}
+            {renderInputField("Remarks", formData.remarks, "remarks", "Enter your remarks", "default")}
+
+            {renderPickerField("Status", formData.status, "status", [
+              { label: "Active", value: "active" },
+              { label: "In Active", value: "inactive" },
+            ])}
+            {renderPickerField("Category", formData.category, "category", [
+              { label: "Physical", value: "physical" },
+              { label: "Online", value: "online" },
+            ])}
+            {renderPickerField("Customer Type", formData.customer_type, "customer_type", [
+              { label: "Builder", value: "Builder" },
+              { label: "Architect", value: "Architect" },
+              { label: "Carpenter", value: "Carpenter" },
+              { label: "Contractor", value: "Contractor" },
+              { label: "Designer", value: "Designer" },
+              { label: "Door Manufacturer", value: "Door Manufacturer" },
+              { label: "Govt Organisation", value: "Govt Organisation" },
+              { label: "Home Owner", value: "Home Owner" },
+              { label: "Kitchen Wardrobe Manufacturer", value: "Kitchen Wardrobe Manufacturer" },
+              { label: "Private Organisation", value: "Private Organisation" },
+              { label: "Project Customer", value: "Project Customer" },
+              { label: "Purchaser", value: "Purchaser" },
+              { label: "Regular", value: "Regular" },
+              { label: "Vendor", value: "Vendor" },
+              { label: "Walking", value: "Walking" },
+              { label: "Wholesale Shop", value: "Wholesale Shop" },
+            ])}
+
             {/* {renderInputField("Opening Balance", formData.opening_balance, "opening_balance", "0", "numeric")} */}
           </View>
         </View>
@@ -142,6 +236,10 @@ const AddCustomerScreen: React.FC = () => {
             {renderInputField("Company Name", formData.company_name, "company_name", "Acme Corp")}
             {renderInputField("Company Email", formData.company_email, "company_email", "contact@acme.com", "email-address")}
             {renderInputField("Website", formData.company_website, "company_website", "www.acme.com", "url")}
+            {renderInputField("Tax Number", formData.tax_number, "tax_number", "Enter your tax number", "numeric")}
+            {renderInputField("Country", formData.country, "country", "Enter your country", "default")}
+            {renderInputField("Province/State", formData.province, "province", "Enter your state", "default")}
+            {renderInputField("Postal Code", formData.postal, "postal", "Enter your postal code", "numeric")}
           </View>
         </View>
 
@@ -176,6 +274,8 @@ const styles = StyleSheet.create({
   },
   header: {
     marginBottom: 30,
+    flexDirection: "column",
+    gap: 10
   },
   breadcrumb: {
     ...TYPOGRAPHY.montserrat.regular,

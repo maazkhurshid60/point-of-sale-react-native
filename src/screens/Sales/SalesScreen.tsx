@@ -34,7 +34,11 @@ const SalesScreen: React.FC = () => {
   const getSaleInvoice = useSalesStore((state) => state.getSaleInvoice);
   const showDialog = useDialogStore((state) => state.showDialog);
 
-  const [customersList, setCustomersList] = useState<any[]>([]);
+  const [customersList, setCustomersList] = useState<any[]>([
+    'Ali Raza',
+    "Uzair khan",
+    "Arif khan",
+  ]);
   const fetchStoreOptions = useAuthStore((state) => state.fetchStoreOptions);
 
   useEffect(() => {
@@ -62,8 +66,8 @@ const SalesScreen: React.FC = () => {
         dialogType = 'INVOICE_SLIP';
         break;
       case 'Ticket':
-        type = '';
-        dialogType = 'RAW_BILL_SLIP';
+        type = 'Ticket';
+        dialogType = 'TICKET_SLIP';
         break;
       case 'GDS':
         type = 'gdn';

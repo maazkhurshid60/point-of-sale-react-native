@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import axiosClient from '../api/axiosClient';
 import { API_ENDPOINTS } from '../constants/apiEndpoints';
 import { useAuthStore } from './useAuthStore';
+import { formatSaleResponseToSlipData } from '../utils/invoiceMapping';
 
 export interface Sale {
   id: number;
@@ -165,51 +166,7 @@ export const useSalesStore = create<SalesState>((set, get) => ({
         const result = res.result;
         if (!result) return null;
 
-        // Map API keys to BaseSlipData structure used in dialogs
-        const saleData = Array.isArray(result.sale) ? result.sale[0] : (result.sale || result);
-        const customerData = Array.isArray(result.customer) ? result.customer[0] : (result.customer || result.customer_data || saleData?.customer || result.saleData?.customer);
-        const companyData = result.company || result.company_data || result.business || result.saleData?.business;
-
-        // Items mapping
-        const saleItemsData = result.sale_items ||
-          result.sale_details ||
-          result.products ||
-          result.items ||
-          saleData?.sale_items ||
-          saleData?.sale_details ||
-          [];
-
-        // User/Cashier mapping
-        const cashierData = result.cashier ||
-          result.cashier_name ||
-          saleData?.user ||
-          result.user ||
-          result.usersData?.sale_person;
-
-        const salesmanData = result.salesman ||
-          result.sales_man ||
-          result.sale_person ||
-          result.salesPerson ||
-          saleData?.salesman ||
-          result.usersData?.salesman_name;
-
-        return {
-          saleData: saleData,
-          companyData: companyData,
-          customerData: customerData,
-          salesmanData: salesmanData,
-          cashierData: cashierData,
-          saleItemsData: saleItemsData,
-          usersData: {
-            sale_person: cashierData?.name || cashierData || 'N/A',
-            customer_name: customerData?.name || customerData?.first_name || 'Walk-in-customer',
-            customer_id: customerData?.customer_id || customerData?.id,
-            salesman_name: salesmanData?.name || salesmanData || '',
-            ...result.usersData
-          },
-          settingsInvoiceFields: result.settings?.invoice_fields || result.settingsInvoiceFields,
-          ...result
-        };
+        return formatSaleResponseToSlipData(result);
       }
       return null;
     } catch (error) {

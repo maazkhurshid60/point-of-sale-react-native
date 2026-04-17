@@ -27,7 +27,8 @@ export class ReceiptService {
     const formattedTax = this.formatAmount(data.totalTax, settings);
     const formattedDiscount = this.formatAmount(data.totalDiscount, settings);
 
-    const ticketNum = data.ticketNo.split('-')[1] || data.ticketNo;
+    const ticketNo = data.ticketNo || '';
+    const ticketNum = ticketNo.includes('-') ? ticketNo.split('-')[1] : ticketNo;
 
     return `
       <html>
@@ -37,11 +38,19 @@ export class ReceiptService {
             @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap');
             body { 
               font-family: 'Montserrat', sans-serif; 
-              width: 80mm; 
-              padding: 0; 
               margin: 0; 
+              padding: 0; 
+              background-color: #f3f4f6;
+              display: flex;
+              justify-content: center;
+            }
+            .ticket {
+              width: 80mm;
+              padding: 10px;
+              background-color: white;
               color: black;
               font-size: 10px;
+              min-height: 100vh;
             }
             .header { text-align: center; margin-bottom: 20px; }
             .store-name { font-size: 14px; font-weight: bold; }
@@ -53,80 +62,79 @@ export class ReceiptService {
             .totals-row { display: flex; justify-content: space-between; margin-bottom: 3px; font-weight: bold; }
             .footer { text-align: center; margin-top: 20px; border-top: 2px solid black; padding-top: 5px; }
             .barcode { margin: 10px auto; display: block; }
+
+            /* Hide background on actual print */
+            @media print {
+              body { background-color: white; }
+              .ticket { width: 100%; padding: 0; }
+            }
           </style>
           <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
         </head>
         <body>
-          <div class="header">
-            <div class="store-name">${data.crtStoreName}</div>
-            <div>${data.crtStoreCompleteAddress}</div>
-            <div>Contact: ${data.crtStoreContact}</div>
-          </div>
+          <div class="ticket">
+            <div class="header">
+              <div class="store-name">${data.crtStoreName}</div>
+              <div>${data.crtStoreCompleteAddress}</div>
+              <div>Contact: ${data.crtStoreContact}</div>
+            </div>
 
-          <div style="width: 150px; margin: 0 auto;">
-            <div class="details-row"><span class="details-label">Date:</span><span>${data.date}</span></div>
-            <div class="details-row"><span class="details-label">Customer:</span><span>${data.customerName}</span></div>
-            <div class="details-row"><span class="details-label">Sale ID:</span><span>${data.saleId}</span></div>
-            <div class="details-row"><span class="details-label">Cashier:</span><span>${data.userName}</span></div>
-            <div class="details-row"><span class="details-label">Customer ID:</span><span>${data.customerId}</span></div>
-          </div>
+            <div style="width: 150px; margin: 0 auto;">
+              <div class="details-row"><span class="details-label">Date:</span><span>${data.date}</span></div>
+              <div class="details-row"><span class="details-label">Customer:</span><span>${data.customerName}</span></div>
+              <div class="details-row"><span class="details-label">Sale ID:</span><span>${data.saleId}</span></div>
+              <div class="details-row"><span class="details-label">Cashier:</span><span>${data.userName}</span></div>
+              <div class="details-row"><span class="details-label">Customer ID:</span><span>${data.customerId}</span></div>
+            </div>
 
-          <table>
-            <thead>
-              <tr>
-                <th>SKU</th>
-                <th>Product</th>
-                <th>Qty</th>
-                <th>Price</th>
-                <th>Disc</th>
-                <th>GST %</th>
-                <th>GST</th>
-                <th>Sub Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${data.saleItems.map(item => `
+            <table>
+              <thead>
                 <tr>
-                  <td>${item[0]}</td>
-                  <td style="text-align: left;">${item[1]}</td>
-                  <td>${item[2]}</td>
-                  <td>${item[3]}</td>
-                  <td>${item[4]}</td>
-                  <td>${item[5]}</td>
-                  <td>${item[6]}</td>
-                  <td>${item[7]}</td>
+                  <th>SKU</th>
+                  <th>Product</th>
+                  <th>Qty</th>
+                  <th>Price</th>
+                  <th>Disc</th>
+                  <th>GST %</th>
+                  <th>GST</th>
+                  <th>Sub Total</th>
                 </tr>
-              `).join('')}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                ${data.saleItems.map(item => `
+                  <tr>
+                    <td>${item[0]}</td>
+                    <td style="text-align: left;">${item[1]}</td>
+                    <td>${item[2]}</td>
+                    <td>${item[3]}</td>
+                    <td>${item[4]}</td>
+                    <td>${item[5]}</td>
+                    <td>${item[6]}</td>
+                    <td>${item[7]}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
 
-          <div class="totals">
-            <div class="totals-row"><span>Sub-Total</span><span>${formattedSubtotal}</span></div>
-            ${formattedTax !== '0.00' ? `<div class="totals-row"><span>GST (${data.tax})</span><span>${formattedTax}</span></div>` : ''}
-            <div class="totals-row"><span>Discount</span><span>${formattedDiscount}</span></div>
-            <div class="totals-row"><span>Total</span><span>${formattedTotal}</span></div>
-            <div class="totals-row"><span>Paid</span><span>${formattedPaid}</span></div>
-            <div class="totals-row"><span>Balance</span><span>${formattedBalance}</span></div>
+            <div class="totals">
+              <div class="totals-row"><span>Sub-Total</span><span>${formattedSubtotal}</span></div>
+              ${formattedTax !== '0.00' ? `<div class="totals-row"><span>GST (${data.tax})</span><span>${formattedTax}</span></div>` : ''}
+              <div class="totals-row"><span>Discount</span><span>${formattedDiscount}</span></div>
+              <div class="totals-row"><span>Total</span><span>${formattedTotal}</span></div>
+              <div class="totals-row"><span>Paid</span><span>${formattedPaid}</span></div>
+              <div class="totals-row"><span>Balance</span><span>${formattedBalance}</span></div>
+            </div>
+
+            <div style="text-align: center; margin-top: 20px;">
+              <img src="https://bwipjs-api.metafloor.com/?bcid=code128&text=${encodeURIComponent(ticketNum)}&scale=2&rotate=N&includetext" style="max-width: 150px; height: 50px;" />
+              <div style="font-size: 8px; margin-top: 5px;">${data.ticketNo}</div>
+            </div>
+
+            <div class="footer">
+              <div>Software by Red Star Technologies</div>
+              <div style="font-weight: bold; margin-top: 5px;">03335749683</div>
+            </div>
           </div>
-
-          <div style="text-align: center; margin-top: 20px;">
-            <svg id="barcode"></svg>
-            <div style="font-size: 8px;">${data.ticketNo}</div>
-          </div>
-
-          <div class="footer">
-            <div>Software by Red Star Technologies</div>
-            <div style="font-weight: bold; margin-top: 5px;">03335749683</div>
-          </div>
-
-          <script>
-            JsBarcode("#barcode", "${ticketNum}", {
-              format: "CODE128",
-              width: 1,
-              height: 25,
-              displayValue: false
-            });
-          </script>
         </body>
       </html>
     `;
@@ -146,7 +154,26 @@ export class ReceiptService {
         <head>
           <style>
             @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap');
-            body { font-family: 'Montserrat', sans-serif; padding: 40px; color: #4B5C69; font-size: 12px; }
+            body { 
+              font-family: 'Montserrat', sans-serif; 
+              margin: 0; 
+              padding: 0; 
+              background-color: #f1f5f9;
+              display: flex;
+              justify-content: center;
+            }
+            .invoice-container {
+              width: 210mm;
+              padding: 40px;
+              background-color: white;
+              color: #4B5C69;
+              font-size: 12px;
+              box-sizing: border-box;
+            }
+            @media print {
+              body { background-color: white; }
+              .invoice-container { width: 100%; padding: 20px; }
+            }
             .header-info { display: flex; justify-content: space-between; color: #8E8E8E; margin-bottom: 5px; }
             .status-badge { color: #6750A4; font-weight: bold; font-size: 10px; }
             .divider { border-bottom: 1.5px solid #8E8E8E; margin: 10px 0; }
@@ -173,63 +200,65 @@ export class ReceiptService {
           </style>
         </head>
         <body>
-          <div class="header-info">
-            <div>
-              <span>Sale Invoice </span>
-              <span class="status-badge">(${saleData.status || ''})</span>
+          <div class="invoice-container">
+            <div class="header-info">
+              <div>
+                <span>Sale Invoice </span>
+                <span class="status-badge">(${saleData.status || ''})</span>
+              </div>
+              <div>Invoice No: ${saleData.invoice_no}</div>
             </div>
-            <div>Invoice No: ${saleData.invoice_no}</div>
-          </div>
-          
-          <div class="divider"></div>
+            
+            <div class="divider"></div>
 
-          <div class="company-banner">
-            <span>🏢</span>
-            <span style="margin-left: 10px;">${companyData.company_name}</span>
-          </div>
-
-          <div class="bill-to">
-            <div class="bill-to-title">Bill To:</div>
-            <div class="info-row">
-              <span class="info-label">Customer:</span>
-              <span class="info-value">${data.customerData.name || 'Walk-in Customer'}</span>
+            <div class="company-banner">
+              <span>🏢</span>
+              <span style="margin-left: 10px;">${companyData.company_name}</span>
             </div>
-            <div class="info-row">
-              <span class="info-label">Date Issued:</span>
-              <span class="info-value">${new Date(saleData.created_at).toLocaleString()}</span>
-            </div>
-          </div>
 
-          <table>
-            <thead>
-              <tr>
-                <th>Item</th>
-                <th>Qty</th>
-                <th>Price</th>
-                <th>Tax</th>
-                <th>Subtotal</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${saleItemsData.map(item => `
+            <div class="bill-to">
+              <div class="bill-to-title">Bill To:</div>
+              <div class="info-row">
+                <span class="info-label">Customer:</span>
+                <span class="info-value">${data.customerData.name || 'Walk-in Customer'}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Date Issued:</span>
+                <span class="info-value">${new Date(saleData.created_at).toLocaleString()}</span>
+              </div>
+            </div>
+
+            <table>
+              <thead>
                 <tr>
-                  <td>${item.product?.product_name || 'Product'}</td>
-                  <td>${item.qty}</td>
-                  <td>${this.formatAmount(item.actual_price, settings)}</td>
-                  <td>${this.formatAmount(item.tax, settings)}</td>
-                  <td>${this.formatAmount(item.subtotal, settings)}</td>
+                  <th>Item</th>
+                  <th>Qty</th>
+                  <th>Price</th>
+                  <th>Tax</th>
+                  <th>Subtotal</th>
                 </tr>
-              `).join('')}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                ${saleItemsData.map(item => `
+                  <tr>
+                    <td>${item.product?.product_name || 'Product'}</td>
+                    <td>${item.qty}</td>
+                    <td>${this.formatAmount(item.actual_price, settings)}</td>
+                    <td>${this.formatAmount(item.tax, settings)}</td>
+                    <td>${this.formatAmount(item.subtotal, settings)}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
 
-          <div class="totals-container">
-            <div class="info-row"><span>Actual Bill</span><span>${this.formatAmount(saleData.actual_bill, settings)}</span></div>
-            <div class="info-row"><span>Total Tax</span><span>${this.formatAmount(saleData.total_tax, settings)}</span></div>
-            <div class="info-row"><span>Discount</span><span>${this.formatAmount(saleData.total_discount, settings)}</span></div>
-            <div class="total-final info-row">
-              <span>Total Bill</span>
-              <span>${this.formatAmount(saleData.total_bill, settings)}</span>
+            <div class="totals-container">
+              <div class="info-row"><span>Actual Bill</span><span>${this.formatAmount(saleData.actual_bill, settings)}</span></div>
+              <div class="info-row"><span>Total Tax</span><span>${this.formatAmount(saleData.total_tax, settings)}</span></div>
+              <div class="info-row"><span>Discount</span><span>${this.formatAmount(saleData.total_discount, settings)}</span></div>
+              <div class="total-final info-row">
+                <span>Total Bill</span>
+                <span>${this.formatAmount(saleData.total_bill, settings)}</span>
+              </div>
             </div>
           </div>
         </body>

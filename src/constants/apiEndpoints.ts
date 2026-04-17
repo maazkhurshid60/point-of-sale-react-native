@@ -29,6 +29,7 @@ export const API_ENDPOINTS = {
     CREDIT_CARD_ACCOUNTS: "/api/creditcardaccount",
     CUSTOMERS: "/api/customer",
     ADD_CUSTOMER: "/api/addcustomer",
+    SEARCH_CUSTOMER: "/api/search/customer",
     ACCOUNT_HEADS: "/api/posexpansehead",
     EXPENSE_ACCOUNTS: "/api/posexpanseaccount",
     PO_LIST: "/api/get-po-list",
@@ -62,5 +63,10 @@ export const API_ENDPOINTS = {
     GET_INVOICE: "/api/get_invoice",
     UPDATE_KITCHEN_ORDER: "/api/update-order-status",
     EDIT_SALE_FORM: "/api/editsaleform",
+  },
+  RESTAURANT: {
+    GET_ALL_FLOORS: "/api/get-all-floors",
+    SHOW_FLOOR: "/api/show-floor/", // Appends id
+    UPDATE_FLOOR: "/api/update-floor",
   }
 };

@@ -40,6 +40,7 @@ interface AuthState {
   listOfFloors: FloorModel[];
   listOfTables: TableModel[];
   listofdecorations: DecorationModel[];
+  lastResponseKeys: string | null;
   accountHeads: AccountHead[];
   purchaseOrders: POAccount[];
   salesmanList: Salesman[];
@@ -71,7 +72,8 @@ interface AuthState {
   addPOSExpense: (data: any) => Promise<boolean>;
   fetchDailyCashReports: () => Promise<any>;
   fetchCustomers: () => Promise<Customer[]>;
-  addNewCustomer: (details: any) => Promise<boolean>;
+  addNewCustomer: (details: any) => Promise<{ success: boolean; message?: string }>;
+  searchCustomers: (query: string) => Promise<Customer[]>;
   fetchSoftwareSettings: () => Promise<void>;
   fetchLeadSettings: () => Promise<void>;
 
@@ -94,6 +96,13 @@ interface AuthState {
   removeDecoration: (id: number) => void;
   updateDecorationPosition: (id: number, x: number, y: number) => void;
   updateDecorationSelection: (id: number | null) => void;
+  updateFloorCapacity: (floorId: number, capacity: number) => void;
+
+  // API Actions for Restaurant
+  fetchFloors: () => Promise<FloorModel[]>;
+  fetchFloorDetails: (id: number) => Promise<boolean>;
+  saveFloorLayout: () => Promise<{ success: boolean; message?: string }>;
+
   clearAuthData: () => void;
 }
 
@@ -123,6 +132,7 @@ export const useAuthStore = create<AuthState>()(
       listOfFloors: [],
       listOfTables: [],
       listofdecorations: [],
+      lastResponseKeys: null,
       accountHeads: [],
       purchaseOrders: [],
       salesmanList: [],
@@ -138,7 +148,7 @@ export const useAuthStore = create<AuthState>()(
         try {
           const { currentShift } = get();
           if (!currentShift) return false;
-          
+
           const res = await axiosClient.post(API_ENDPOINTS.TRANSACTIONS.UPDATE_CASH_ACCOUNT, {
             shift_id: currentShift.shift_id,
             default_cash_account: accountId
@@ -146,9 +156,9 @@ export const useAuthStore = create<AuthState>()(
 
           if (res.data?.success) {
             const account = get().cashAccounts.find(a => a.id === accountId) || null;
-            set({ 
+            set({
               selectedCashAccount: account,
-              selectedCashAccountId: accountId 
+              selectedCashAccountId: accountId
             });
             return true;
           }
@@ -458,10 +468,10 @@ export const useAuthStore = create<AuthState>()(
         try {
           const res = await axiosClient.get(API_ENDPOINTS.CATALOG.BANK_ACCOUNTS);
           const accounts = res.data?.success ? res.data.accounts : [];
-          
+
           const shiftDefaultId = get().currentShift?.default_bank_account;
           const shiftDefaultAcc = accounts.find((a: any) => a.id === shiftDefaultId);
-          
+
           const selectedAcc = shiftDefaultAcc || (accounts.length > 0 ? accounts[0] : null);
 
           set({
@@ -477,12 +487,12 @@ export const useAuthStore = create<AuthState>()(
         try {
           const res = await axiosClient.get(API_ENDPOINTS.CATALOG.CASH_ACCOUNTS);
           const accounts = res.data?.success ? res.data.accounts : [];
-          
+
           const shiftDefaultId = get().currentShift?.default_cash_account;
           const shiftDefaultAcc = accounts.find((a: any) => a.id === shiftDefaultId);
-          
+
           const selectedAcc = shiftDefaultAcc || (accounts.length > 0 ? accounts[0] : null);
-          
+
           set({
             cashAccounts: accounts,
             selectedCashAccountId: selectedAcc?.id || null,
@@ -591,16 +601,46 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
+      searchCustomers: async (query: string) => {
+        try {
+          if (!query.trim()) return get().fetchCustomers();
+          const res = await axiosClient.get(API_ENDPOINTS.CATALOG.SEARCH_CUSTOMER, {
+            params: { query }
+          });
+          // The search response uses "data" field as per user report
+          return res.data?.data || res.data?.customers || [];
+        } catch (e) {
+          console.error("Search customers error:", e);
+          return [];
+        }
+      },
+
       addNewCustomer: async (details) => {
         try {
           // As per user request, using /api/addcustomer with params for POST
           const res = await axiosClient.post(API_ENDPOINTS.CATALOG.ADD_CUSTOMER, null, {
             params: details
           });
-          return !!res.data?.success;
-        } catch (e) {
-          console.error(e);
-          return false;
+
+          if (res.data?.success) {
+            return { success: true };
+          }
+
+          // Capture backend message if success is false
+          return {
+            success: false,
+            message: res.data?.message || res.data?.error || "Failed to add customer"
+          };
+        } catch (e: any) {
+          console.error("Add customer error:", e);
+
+          // Extract specific validation or server errors from Axios catch block
+          const errorMessage = e.response?.data?.message ||
+            e.response?.data?.error ||
+            (e.response?.data?.errors ? Object.values(e.response.data.errors).flat().join("\n") : null) ||
+            "An unexpected error occurred while adding the customer.";
+
+          return { success: false, message: errorMessage };
         }
       },
 
@@ -631,15 +671,18 @@ export const useAuthStore = create<AuthState>()(
       // Table Management Implementation
       setCurrentFloor: (floor) => set({ currentFloor: floor }),
       addFloor: () => {
-        const { listOfFloors } = get();
         const newFloor: FloorModel = {
-          floorId: listOfFloors.length + 1,
-          floorName: `Floor ${listOfFloors.length + 1}`,
-          storeid: 1,
-          floorNo: (listOfFloors.length + 1).toString(),
-          noOfTable: 10,
+          floorId: Date.now(),
+          floorName: `Floor ${get().listOfFloors.length + 1}`,
+          floorNo: (get().listOfFloors.length + 1).toString(),
+          noOfTable: 10, // Changed from 0 to 10 to satisfy backend validation
+          storeid: 1 // Default store ID
         };
-        set({ listOfFloors: [...listOfFloors, newFloor], currentFloor: newFloor });
+        set({
+          listOfFloors: [...get().listOfFloors, newFloor],
+          currentFloor: newFloor,
+        });
+        return newFloor;
       },
       removeFloor: () => {
         const { listOfFloors } = get();
@@ -649,6 +692,17 @@ export const useAuthStore = create<AuthState>()(
         set({ listOfFloors: newList, currentFloor: newList[newList.length - 1] });
       },
       addTable: (floorId) => {
+        const state = get();
+        const currentFloor = state.listOfFloors.find(f => f.floorId === floorId);
+        const capacity = currentFloor?.noOfTable || 0;
+        const currentTables = state.listOfTables.filter(t => t.floorid === floorId);
+
+        if (currentTables.length >= capacity) {
+          const { Alert } = require('react-native');
+          Alert.alert("Capacity Reached", `This floor can only hold ${capacity} tables. Please increase the capacity in floor settings.`);
+          return;
+        }
+
         const { listOfTables } = get();
         const newTable: TableModel = {
           tableId: Date.now(),
@@ -789,6 +843,240 @@ export const useAuthStore = create<AuthState>()(
             isSelected: d.id === id,
           })),
         }));
+      },
+      updateFloorCapacity: (floorId, capacity) => {
+        set((state) => ({
+          listOfFloors: state.listOfFloors.map((f) =>
+            f.floorId === floorId ? { ...f, noOfTable: capacity } : f
+          ),
+          currentFloor: state.currentFloor?.floorId === floorId 
+            ? { ...state.currentFloor, noOfTable: capacity } 
+            : state.currentFloor
+        }));
+      },
+
+      fetchFloors: async () => {
+        try {
+          const res = await axiosClient.get(API_ENDPOINTS.RESTAURANT.GET_ALL_FLOORS);
+          if (res.data?.success && res.data?.floors) {
+            const mappedFloors: FloorModel[] = res.data.floors.map((f: any) => ({
+              floorId: Number(f.id || 0),
+              floorName: f.name || "",
+              floorNo: String(f.floor_no || ""),
+              noOfTable: parseInt(f.tables_capacity || f.tables || "0") || 0,
+              storeid: Number(f.store_id || 0)
+            }));
+            set({ listOfFloors: mappedFloors });
+            return mappedFloors;
+          }
+          return [];
+        } catch (e) {
+          console.error("Fetch floors error:", e);
+          return [];
+        }
+      },
+
+      fetchFloorDetails: async (id) => {
+        try {
+          const res = await axiosClient.get(`${API_ENDPOINTS.RESTAURANT.SHOW_FLOOR}${id}`, {
+            params: { id }
+          });
+
+          if (res.data) {
+            set({ 
+              lastResponseKeys: Object.keys(res.data).join(', '),
+              lastResponseFloor: res.data.floor
+            } as any);
+          }
+
+          if (res.data?.success) {
+            const data = res.data;
+            const rawFloor = data.floor;
+            const source = Array.isArray(rawFloor) ? rawFloor[0] : (rawFloor || data);
+
+            // Handle server typos and plural/singular variations
+            const resTables = source.tables || data.tables || source.table || [];
+            const resDecorations = source.decroation || source.decoration || source.decorations || data.decroation || data.decoration || data.decorations || [];
+
+            const mappedTables: TableModel[] = resTables.map((t: any) => ({
+              tableId: Number(t.id || 0),
+              tableName: t.name,
+              floorid: Number(t.floor_id || source.id || id || 0),
+              x: Number(t.x_axis || 0),
+              y: Number(t.y_axis || 0),
+              width: Number(t.width || 100),
+              height: Number(t.height || 60),
+              isRounded: t.is_round === 1 || t.is_round === true,
+              rotation: Number(t.rotation || 0),
+              chairsCount: Number(t.table_chairs || 0),
+              listofChairs: (() => {
+                try {
+                  return typeof t.list_of_chairs === 'string'
+                    ? JSON.parse(t.list_of_chairs)
+                    : (Array.isArray(t.list_of_chairs) ? t.list_of_chairs : [0, 0, 0, 0]);
+                } catch (e) {
+                  return [0, 0, 0, 0];
+                }
+              })(),
+              isSelected: false,
+            }));
+
+            const mappedDecorations: DecorationModel[] = resDecorations.map((d: any) => ({
+              id: Number(d.id || 0),
+              floor: Number(d.floor_id || source.id || id || 0),
+              title: d.name,
+              x: Number(d.x_axis || 0),
+              y: Number(d.y_axis || 0),
+              width: 100,
+              height: 100,
+              isSelected: false,
+            }));
+
+            set({
+              listOfTables: mappedTables,
+              listofdecorations: mappedDecorations
+            });
+            return true;
+          }
+          return false;
+        } catch (e) {
+          console.error("Fetch floor details error:", e);
+          return false;
+        }
+      },
+      saveFloorLayout: async () => {
+        try {
+          const state = get();
+          const payload = {
+            floors: state.listOfFloors.map(f => ({
+              id: f.floorId > 1000000000 ? 0 : f.floorId,
+              name: f.floorName,
+              floor_no: f.floorNo,
+              tables_capacity: (f.noOfTable || 0).toString(),
+              store_id: f.storeid || 1,
+              remarks: ""
+            })),
+            tables: state.listOfTables.map(t => ({
+              id: t.tableId > 1000000000 ? 0 : t.tableId,
+              floor_id: t.floorid > 1000000000 ? 0 : t.floorid,
+              name: t.tableName,
+              table_chairs: (t.chairsCount || 0).toString(),
+              x_axis: t.x.toString(),
+              y_axis: t.y.toString(),
+              height: t.height.toString(),
+              width: t.width.toString(),
+              is_round: t.isRounded ? 1 : 0,
+              rotation: t.rotation.toString(),
+              list_of_chairs: t.listofChairs,
+              status: 1,
+              remarks: ""
+            })),
+            // Send both keys to handle server inconsistency/typos
+            decroation: state.listofdecorations.map(d => ({
+              id: d.id > 1000000000 ? 0 : d.id,
+              floor_id: d.floor > 1000000000 ? 0 : d.floor,
+              name: d.title,
+              x_axis: d.x.toString(),
+              y_axis: d.y.toString(),
+              remarks: ""
+            })),
+            decorations: state.listofdecorations.map(d => ({
+              id: d.id > 1000000000 ? 0 : d.id,
+              floor_id: d.floor > 1000000000 ? 0 : d.floor,
+              name: d.title,
+              x_axis: d.x.toString(),
+              y_axis: d.y.toString(),
+              remarks: ""
+            }))
+          };
+
+          const res = await axiosClient.post(API_ENDPOINTS.RESTAURANT.UPDATE_FLOOR, payload);
+
+          if (res.data?.success) {
+            const data = res.data;
+
+            // Sync logic must match fetch logic (handling floor array and singular keys)
+            const rawFloor = data.floor;
+            const source = Array.isArray(rawFloor) ? rawFloor[0] : (rawFloor || data);
+
+            const resFloors = Array.isArray(data.floors) ? data.floors : (rawFloor ? (Array.isArray(rawFloor) ? rawFloor : [rawFloor]) : []);
+            
+            // Handle server typos and plural/singular variations
+            const resTables = source.tables || data.tables || source.table || [];
+            const resDecorations = source.decroation || source.decoration || source.decorations || data.decroation || data.decoration || data.decorations || [];
+
+            // Map returned data back to store models to sync IDs
+            const mappedFloors: FloorModel[] = resFloors.map((f: any) => ({
+              floorId: Number(f.id || 0),
+              floorName: f.name || "",
+              floorNo: String(f.floor_no || ""),
+              noOfTable: Number(f.tables_capacity || 0),
+              storeid: Number(f.store_id || 0)
+            }));
+
+            const mappedTables: TableModel[] = resTables.map((t: any) => ({
+              tableId: Number(t.id || 0),
+              tableName: t.name,
+              floorid: Number(t.floor_id || (source.id) || 0),
+              x: Number(t.x_axis || 0),
+              y: Number(t.y_axis || 0),
+              width: Number(t.width || 100),
+              height: Number(t.height || 60),
+              isRounded: t.is_round === 1 || t.is_round === true,
+              rotation: Number(t.rotation || 0),
+              chairsCount: Number(t.table_chairs || 0),
+              listofChairs: (() => {
+                try {
+                  return typeof t.list_of_chairs === 'string'
+                    ? JSON.parse(t.list_of_chairs)
+                    : (Array.isArray(t.list_of_chairs) ? t.list_of_chairs : [0, 0, 0, 0]);
+                } catch (e) {
+                  return [0, 0, 0, 0];
+                }
+              })(),
+              isSelected: false
+            }));
+
+            const mappedDecorations: DecorationModel[] = resDecorations.map((d: any) => ({
+              id: Number(d.id || 0),
+              floor: Number(d.floor_id || (source.id) || 0),
+              title: d.name,
+              x: Number(d.x_axis || 0),
+              y: Number(d.y_axis || 0),
+              width: 50,
+              height: 50,
+              isSelected: false
+            }));
+
+            // Crucially: If we have mapped floors, use them. If not, don't nuke the existing ones.
+            const newList = mappedFloors.length > 0 ? mappedFloors : state.listOfFloors;
+
+            set({
+              listOfFloors: newList,
+              listOfTables: mappedTables,
+              listofdecorations: mappedDecorations
+            });
+
+            // Update currentFloor reference if it was a new floor
+            if (state.currentFloor) {
+              const updatedCurrent = newList.find(f => f.floorNo === state.currentFloor?.floorNo);
+              if (updatedCurrent) set({ currentFloor: updatedCurrent });
+            }
+          }
+
+          return {
+            success: !!res.data?.success,
+            message: res.data?.message || res.data?.error || (res.data?.errors ? Object.values(res.data.errors).flat().join(", ") : "Unknown server error")
+          };
+        } catch (e: any) {
+          console.error("Save floor layout error:", e);
+          const serverError = e.response?.data?.errors ? Object.values(e.response.data.errors).flat().join(", ") : null;
+          const errorMsg = serverError || e.response?.data?.message || e.response?.data?.error || e.message || "Failed to save";
+          return {
+            success: false,
+            message: errorMsg
+          };
+        }
       },
 
       clearAuthData: () => {

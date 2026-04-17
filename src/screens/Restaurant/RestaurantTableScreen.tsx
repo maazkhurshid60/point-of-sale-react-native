@@ -9,6 +9,8 @@ import {
   ImageBackground,
   TextInput,
   Image,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { FontAwesome6, MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import Animated, {
@@ -67,8 +69,8 @@ const Chairs: React.FC<ChairProps> = ({ side, count }) => {
 // --- Professional Control Card ---
 
 const ControlCard: React.FC<{ title: string; children: React.ReactNode; icon: string }> = ({ title, children, icon }) => (
-  <Animated.View 
-    entering={FadeInLeft.duration(300)} 
+  <Animated.View
+    entering={FadeInLeft.duration(300)}
     layout={Layout.springify()}
     style={styles.properCard}
   >
@@ -157,7 +159,7 @@ const DraggableTable: React.FC<TableProps> = ({ table, onSelect, onUpdatePositio
         {table.isSelected && (
           <GestureDetector gesture={resizeGesture}>
             <View style={styles.resizeHandle}>
-               <Ionicons name="expand" size={12} color="white" />
+              <Ionicons name="expand" size={12} color="white" />
             </View>
           </GestureDetector>
         )}
@@ -228,6 +230,7 @@ export const RestaurantTableScreen: React.FC = () => {
   const { width: windowWidth } = useWindowDimensions();
   const store = useAuthStore();
   const setScreen = useUIStore((state) => state.setScreen);
+  const [isSaving, setIsSaving] = useState(false);
 
   const selectedTable = store.listOfTables.find(t => t.isSelected);
   const selectedDecoration = store.listofdecorations.find(d => d.isSelected);
@@ -239,11 +242,11 @@ export const RestaurantTableScreen: React.FC = () => {
   }, []);
 
   const tablesInCurrentFloor = store.listOfTables.filter(
-    (t) => t.floorid === store.currentFloor?.floorId
+    (t) => Number(t.floorid) === Number(store.currentFloor?.floorId)
   );
 
   const decorationsInCurrentFloor = store.listofdecorations.filter(
-    (d) => d.floor === store.currentFloor?.floorId
+    (d) => Number(d.floor) === Number(store.currentFloor?.floorId)
   );
 
   const handleSelectTable = (id: number) => {
@@ -256,161 +259,199 @@ export const RestaurantTableScreen: React.FC = () => {
     store.updateTableSelection(null);
   };
 
+  const handleSave = async () => {
+    setIsSaving(true);
+    const result = await store.saveFloorLayout();
+    setIsSaving(false);
+    if (result.success) {
+      Alert.alert("Success", "Restaurant layout saved successfully!");
+    } else {
+      Alert.alert("Error", result.message || "Failed to save restaurant layout. Please try again.");
+    }
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => setScreen('DEFAULT')}>
+        <TouchableOpacity style={styles.backButton} onPress={() => setScreen('RESTAURANT_FLOORS')}>
           <View style={styles.backCirc}>
             <Ionicons name="chevron-back" size={20} color={COLORS.primary} />
           </View>
-          <Text style={styles.backText}>Return</Text>
+          <Text style={styles.backText}>Floors</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Floor Editor</Text>
         <View style={styles.headerActions}>
-           <TouchableOpacity style={styles.topSaveBtn} onPress={() => {}}>
+          <TouchableOpacity
+            style={[styles.topSaveBtn, isSaving && { opacity: 0.7 }]}
+            onPress={handleSave}
+            disabled={isSaving}
+          >
+            {isSaving ? (
+              <ActivityIndicator size="small" color="white" />
+            ) : (
               <Text style={styles.topSaveBtnText}>Save</Text>
-           </TouchableOpacity>
+            )}
+          </TouchableOpacity>
         </View>
       </View>
 
       <View style={styles.mainContent}>
         <View style={styles.sidebarSolid}>
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 30 }}>
-            
+
             <ControlCard title="Current Floor" icon="map-outline">
-                <View style={styles.properRow}>
-                  <Text style={styles.properLabel}>Floor Name</Text>
-                  <TextInput
-                    style={styles.properInput}
-                    placeholder="Enter name"
-                    placeholderTextColor="#A0AEC0"
-                    value={store.currentFloor?.floorName}
-                    onChangeText={(v) => store.currentFloor && store.updateFloorName(store.currentFloor.floorId, v)}
-                  />
+              <View style={styles.properRow}>
+                <Text style={styles.properLabel}>Floor Name</Text>
+                <TextInput
+                  style={styles.properInput}
+                  placeholder="Enter name"
+                  placeholderTextColor="#A0AEC0"
+                  value={store.currentFloor?.floorName}
+                  onChangeText={(v) => store.currentFloor && store.updateFloorName(store.currentFloor.floorId, v)}
+                />
+              </View>
+              <View style={styles.properRow}>
+                <Text style={styles.properLabel}>Tables Capacity</Text>
+                <TextInput
+                  style={styles.properInput}
+                  keyboardType="numeric"
+                  placeholder="e.g. 10"
+                  placeholderTextColor="#A0AEC0"
+                  value={store.currentFloor?.noOfTable.toString()}
+                  onChangeText={(v) => store.currentFloor && store.updateFloorCapacity(store.currentFloor.floorId, parseInt(v || "0"))}
+                />
+              </View>
+              <View style={styles.properRow}>
+                <Text style={styles.properLabel}>Tables Used</Text>
+                <View style={styles.badgeContainer}>
+                  <Text style={[styles.badgeText, tablesInCurrentFloor.length >= (store.currentFloor?.noOfTable || 0) && { color: '#E53E3E' }]}>
+                    {tablesInCurrentFloor.length} / {store.currentFloor?.noOfTable || 0}
+                  </Text>
                 </View>
-                <View style={styles.flexRow}>
-                    <TouchableOpacity style={styles.properActionBtn} onPress={store.addFloor}>
-                       <Ionicons name="add" size={16} color="white" />
-                       <Text style={styles.actionBtnText}>Add</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={[styles.properActionBtn, { backgroundColor: '#E53E3E' }]} onPress={store.removeFloor}>
-                       <Ionicons name="trash-outline" size={14} color="white" />
-                       <Text style={styles.actionBtnText}>Delete</Text>
-                    </TouchableOpacity>
-                </View>
+              </View>
+              <View style={styles.flexRow}>
+                <TouchableOpacity style={styles.properActionBtn} onPress={() => store.currentFloor && store.addTable(store.currentFloor.floorId)}>
+                  <Ionicons name="add" size={16} color="white" />
+                  <Text style={styles.actionBtnText}>Add Table</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.properActionBtn, { backgroundColor: '#E53E3E' }]} onPress={store.removeFloor}>
+                  <Ionicons name="trash-outline" size={14} color="white" />
+                  <Text style={styles.actionBtnText}>Delete</Text>
+                </TouchableOpacity>
+              </View>
             </ControlCard>
 
             <View style={styles.sep} />
 
             {selectedTable ? (
               <ControlCard title="Selected Table" icon="cube-outline">
-                 <View style={styles.properRow}>
-                    <Text style={styles.properLabel}>Title</Text>
-                    <TextInput
-                      style={styles.properInput}
-                      value={selectedTable.tableName}
-                      onChangeText={(v) => store.updateTableName(selectedTable.tableId, v)}
-                    />
-                  </View>
-                  
-                  <View style={styles.properRow}>
-                    <View style={styles.spreadRow}>
-                       <Text style={styles.properLabel}>Rotation</Text>
-                       <Text style={styles.badgeText}>{Math.round(selectedTable.rotation * 360)}°</Text>
-                    </View>
-                    <Slider
-                      style={{ height: 40 }}
-                      minimumValue={0}
-                      maximumValue={0.5}
-                      value={selectedTable.rotation}
-                      onValueChange={(v) => store.updateTableRotation(selectedTable.tableId, v)}
-                      minimumTrackTintColor="#FFD700"
-                      maximumTrackTintColor="rgba(255,255,255,0.1)"
-                      thumbTintColor="white"
-                    />
-                  </View>
+                <View style={styles.properRow}>
+                  <Text style={styles.properLabel}>Title</Text>
+                  <TextInput
+                    style={styles.properInput}
+                    value={selectedTable.tableName}
+                    onChangeText={(v) => store.updateTableName(selectedTable.tableId, v)}
+                  />
+                </View>
 
-                  <View style={styles.properRow}>
-                     <Text style={styles.properLabel}>Shape Mode</Text>
-                     <View style={styles.properToggle}>
-                        <TouchableOpacity 
-                          style={[styles.toggBtn, !selectedTable.isRounded && styles.toggBtnActive]}
-                          onPress={() => !selectedTable.isRounded || store.toggleTableShape(selectedTable.tableId)}
-                        >
-                           <Text style={[styles.toggText, !selectedTable.isRounded && styles.toggTextActive]}>Square</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity 
-                          style={[styles.toggBtn, selectedTable.isRounded && styles.toggBtnActive]}
-                          onPress={() => selectedTable.isRounded || store.toggleTableShape(selectedTable.tableId)}
-                        >
-                           <Text style={[styles.toggText, selectedTable.isRounded && styles.toggTextActive]}>Round</Text>
-                        </TouchableOpacity>
-                     </View>
+                <View style={styles.properRow}>
+                  <View style={styles.spreadRow}>
+                    <Text style={styles.properLabel}>Rotation</Text>
+                    <Text style={styles.badgeText}>{Math.round(selectedTable.rotation * 360)}°</Text>
                   </View>
+                  <Slider
+                    style={{ height: 40 }}
+                    minimumValue={0}
+                    maximumValue={0.5}
+                    value={selectedTable.rotation}
+                    onValueChange={(v) => store.updateTableRotation(selectedTable.tableId, v)}
+                    minimumTrackTintColor="#FFD700"
+                    maximumTrackTintColor="rgba(255,255,255,0.1)"
+                    thumbTintColor="white"
+                  />
+                </View>
 
-                  <View style={styles.properRow}>
-                    <Text style={styles.properLabel}>Chair Capacity (Max 16)</Text>
-                    <View style={styles.counterRow}>
-                        <TouchableOpacity onPress={() => store.removeChair(selectedTable.tableId)} style={styles.circBtn}>
-                          <Ionicons name="remove" size={18} color="white" />
-                        </TouchableOpacity>
-                        <Text style={styles.countNum}>{selectedTable.chairsCount}</Text>
-                        <TouchableOpacity 
-                          onPress={() => store.addChair(selectedTable.tableId)} 
-                          style={[styles.circBtn, selectedTable.chairsCount >= 16 && { opacity: 0.5 }]}
-                          disabled={selectedTable.chairsCount >= 16}
-                        >
-                          <Ionicons name="add" size={18} color="white" />
-                        </TouchableOpacity>
-                    </View>
+                <View style={styles.properRow}>
+                  <Text style={styles.properLabel}>Shape Mode</Text>
+                  <View style={styles.properToggle}>
+                    <TouchableOpacity
+                      style={[styles.toggBtn, !selectedTable.isRounded && styles.toggBtnActive]}
+                      onPress={() => !selectedTable.isRounded || store.toggleTableShape(selectedTable.tableId)}
+                    >
+                      <Text style={[styles.toggText, !selectedTable.isRounded && styles.toggTextActive]}>Square</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.toggBtn, selectedTable.isRounded && styles.toggBtnActive]}
+                      onPress={() => selectedTable.isRounded || store.toggleTableShape(selectedTable.tableId)}
+                    >
+                      <Text style={[styles.toggText, selectedTable.isRounded && styles.toggTextActive]}>Round</Text>
+                    </TouchableOpacity>
                   </View>
+                </View>
 
-                  <TouchableOpacity 
-                    style={styles.properDeleteBtn}
-                    onPress={() => store.removeTable(selectedTable.tableId)}
-                  >
-                    <Ionicons name="trash" size={18} color="white" />
-                    <Text style={styles.actionBtnText}>Remove Table</Text>
-                  </TouchableOpacity>
+                <View style={styles.properRow}>
+                  <Text style={styles.properLabel}>Chair Capacity (Max 16)</Text>
+                  <View style={styles.counterRow}>
+                    <TouchableOpacity onPress={() => store.removeChair(selectedTable.tableId)} style={styles.circBtn}>
+                      <Ionicons name="remove" size={18} color="white" />
+                    </TouchableOpacity>
+                    <Text style={styles.countNum}>{selectedTable.chairsCount}</Text>
+                    <TouchableOpacity
+                      onPress={() => store.addChair(selectedTable.tableId)}
+                      style={[styles.circBtn, selectedTable.chairsCount >= 16 && { opacity: 0.5 }]}
+                      disabled={selectedTable.chairsCount >= 16}
+                    >
+                      <Ionicons name="add" size={18} color="white" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                <TouchableOpacity
+                  style={styles.properDeleteBtn}
+                  onPress={() => store.removeTable(selectedTable.tableId)}
+                >
+                  <Ionicons name="trash" size={18} color="white" />
+                  <Text style={styles.actionBtnText}>Remove Table</Text>
+                </TouchableOpacity>
               </ControlCard>
             ) : selectedDecoration ? (
               <ControlCard title="Plant Controls" icon="leaf-outline">
-                 <Text style={styles.subText}>Currently adjusting: {selectedDecoration.title}</Text>
-                 <TouchableOpacity 
-                    style={styles.properDeleteBtn}
-                    onPress={() => store.removeDecoration(selectedDecoration.id)}
-                  >
-                    <Ionicons name="close-circle" size={18} color="white" />
-                    <Text style={styles.actionBtnText}>Remove Plant</Text>
-                  </TouchableOpacity>
+                <Text style={styles.subText}>Currently adjusting: {selectedDecoration.title}</Text>
+                <TouchableOpacity
+                  style={styles.properDeleteBtn}
+                  onPress={() => store.removeDecoration(selectedDecoration.id)}
+                >
+                  <Ionicons name="close-circle" size={18} color="white" />
+                  <Text style={styles.actionBtnText}>Remove Plant</Text>
+                </TouchableOpacity>
               </ControlCard>
             ) : (
               <View style={styles.properEmpty}>
-                 <Ionicons name="hand-right" size={24} color="rgba(255,255,255,0.2)" />
-                 <Text style={styles.properEmptyText}>Select an item on the canvas to edit its properties</Text>
+                <Ionicons name="hand-right" size={24} color="rgba(255,255,255,0.2)" />
+                <Text style={styles.properEmptyText}>Select an item on the canvas to edit its properties</Text>
               </View>
             )}
 
             <View style={styles.sep} />
 
             <ControlCard title="Workspace" icon="apps-outline">
-               <View style={styles.quickGrid}>
-                  <TouchableOpacity 
-                    style={styles.gridBtn}
-                    onPress={() => store.currentFloor && store.addTable(store.currentFloor.floorId)}
-                  >
-                    <Ionicons name="add-circle" size={24} color="#FFD700" />
-                    <Text style={styles.gridBtnText}>Table</Text>
-                  </TouchableOpacity>
+              <View style={styles.quickGrid}>
+                <TouchableOpacity
+                  style={styles.gridBtn}
+                  onPress={() => store.currentFloor && store.addTable(store.currentFloor.floorId)}
+                >
+                  <Ionicons name="add-circle" size={24} color="#FFD700" />
+                  <Text style={styles.gridBtnText}>Table</Text>
+                </TouchableOpacity>
 
-                  <TouchableOpacity 
-                    style={styles.gridBtn}
-                    onPress={() => store.currentFloor && store.addDecoration(store.currentFloor.floorId)}
-                  >
-                     <Ionicons name="leaf" size={24} color="#48BB78" />
-                     <Text style={styles.gridBtnText}>Plant</Text>
-                  </TouchableOpacity>
-               </View>
+                <TouchableOpacity
+                  style={styles.gridBtn}
+                  onPress={() => store.currentFloor && store.addDecoration(store.currentFloor.floorId)}
+                >
+                  <Ionicons name="leaf" size={24} color="#48BB78" />
+                  <Text style={styles.gridBtnText}>Plant</Text>
+                </TouchableOpacity>
+              </View>
             </ControlCard>
 
           </ScrollView>
@@ -464,15 +505,15 @@ export const RestaurantTableScreen: React.FC = () => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F0F2F5' },
-  header: { 
+  header: {
     height: 70,
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    paddingHorizontal: 20, 
-    backgroundColor: 'white', 
-    borderBottomWidth: 1, 
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    backgroundColor: 'white',
+    borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',
-    zIndex: 100 
+    zIndex: 100
   },
   backButton: { flexDirection: 'row', alignItems: 'center', width: 120 },
   backCirc: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#F7FAFC', justifyContent: 'center', alignItems: 'center', marginRight: 10 },
@@ -487,7 +528,7 @@ const styles = StyleSheet.create({
   properCardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
   iconCircle: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#4E3B94', justifyContent: 'center', alignItems: 'center', marginRight: 10 },
   properCardTitle: { color: 'white', ...TYPOGRAPHY.montserrat.bold, fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.8 },
-  properCardContent: { },
+  properCardContent: {},
   properRow: { marginBottom: 15 },
   properLabel: { ...TYPOGRAPHY.montserrat.medium, fontSize: 11, color: '#A0AEC0', marginBottom: 5 },
   properInput: { backgroundColor: '#4E3B94', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, color: 'white', ...TYPOGRAPHY.montserrat.semiBold, fontSize: 14 },
@@ -496,6 +537,7 @@ const styles = StyleSheet.create({
   actionBtnText: { color: 'white', ...TYPOGRAPHY.montserrat.bold, fontSize: 11 },
   sep: { height: 5 },
   spreadRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  badgeContainer: { backgroundColor: '#2D1F5C', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, alignSelf: 'flex-start' },
   badgeText: { color: '#FFD700', ...TYPOGRAPHY.montserrat.bold, fontSize: 12 },
   properToggle: { flexDirection: 'row', backgroundColor: '#2D1F5C', borderRadius: 10, padding: 4 },
   toggBtn: { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 8 },

@@ -181,7 +181,7 @@ const RightSideMenu: React.FC = () => {
                   title="Restaurant"
                   subtitle="Floor management"
                   icon={<MaterialIcons name="table-restaurant" size={22} color="white" />}
-                  onTap={() => navigateTo('RESTAURANT_TABLES')}
+                  onTap={() => navigateTo('RESTAURANT_FLOORS')}
                 />
 
                 <View style={styles.sectionDivider} />

@@ -14,9 +14,9 @@ interface InvoiceDialogProps {
 export default function InvoiceDialog({ slipData, onClose }: InvoiceDialogProps) {
   const { width, height } = useWindowDimensions();
 
+  console.log("The invoice data of the sale is", slipData)
   // Responsive breakpoints
   const isTablet = width >= 768;
-  const isMobile = !isTablet;
 
   // Dynamic values
   const dialogWidth = isTablet ? 900 : width * 0.95;
@@ -26,6 +26,8 @@ export default function InvoiceDialog({ slipData, onClose }: InvoiceDialogProps)
     const scale = isTablet ? 1.2 : 1;
     return size * scale;
   };
+
+  const customerName = slipData.customerData?.name || slipData.usersData?.customer_name || 'Walk-in Customer';
 
   const generateHTML = () => {
     const productsHTML = (slipData.saleItemsData || []).map((item: any) => `
@@ -41,47 +43,72 @@ export default function InvoiceDialog({ slipData, onClose }: InvoiceDialogProps)
 
     return `
       <html>
-        <body style="font-family: Arial, sans-serif; padding: 40px; color: #1E293B;">
-          <div style="text-align: center; margin-bottom: 20px;">
-            <h1 style="margin: 0; color: ${COLORS.primary}; text-transform: uppercase;">Sale Invoice</h1>
-          </div>
-          <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
-            <div>
-              <h2 style="margin: 0;">${slipData.companyData?.company_name || 'Owner Inventory'}</h2>
-              <p style="margin: 5px 0; font-size: 14px;">${slipData.companyData?.lead_street || ''}</p>
-              <p style="margin: 5px 0; font-size: 14px;">${slipData.companyData?.lead_contact || ''}</p>
+        <head>
+          <style>
+            body { 
+              font-family: Arial, sans-serif; 
+              margin: 0; 
+              padding: 0; 
+              background-color: #f1f5f9;
+              display: flex;
+              justify-content: center;
+            }
+            .invoice-container {
+              width: 210mm;
+              padding: 40px;
+              background-color: white;
+              color: #1E293B;
+              box-sizing: border-box;
+            }
+            @media print {
+              body { background-color: white; }
+              .invoice-container { width: 100%; padding: 20px; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="invoice-container">
+            <div style="text-align: center; margin-bottom: 20px;">
+              <h1 style="margin: 0; color: ${COLORS.primary}; text-transform: uppercase;">Sale Invoice</h1>
             </div>
-            <div style="text-align: right;">
-              <h2 style="margin: 0; color: ${COLORS.primary};">Bill To:</h2>
-              <p style="margin: 5px 0; font-size: 16px;"><b>${customerName}</b></p>
-              <p style="margin: 5px 0; font-size: 14px;">ID: ${slipData.customerData?.id || ''}</p>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+              <div>
+                <h2 style="margin: 0;">${slipData.companyData?.company_name || 'Owner Inventory'}</h2>
+                <p style="margin: 5px 0; font-size: 14px;">${slipData.companyData?.lead_street || ''}</p>
+                <p style="margin: 5px 0; font-size: 14px;">${slipData.companyData?.lead_contact || ''}</p>
+              </div>
+              <div style="text-align: right;">
+                <h2 style="margin: 0; color: ${COLORS.primary};">Bill To:</h2>
+                <p style="margin: 5px 0; font-size: 16px;"><b>${customerName}</b></p>
+                <p style="margin: 5px 0; font-size: 14px;">ID: ${slipData.customerData?.id || ''}</p>
+              </div>
             </div>
-          </div>
-          <p style="margin: 5px 0; font-size: 14px;"><b>Invoice No: ${slipData.saleData?.invoice_no || 'N/A'}</b></p>
-          <p style="margin: 5px 0; font-size: 14px;">Date: ${slipData.saleData?.created_at || TRANSFORM_DATE_TIME_TO_STRING(new Date(), true)}</p>
-          <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
-            <thead>
-              <tr style="background-color: #F8FAFC; color: ${COLORS.primary};">
-                <th style="padding: 12px; text-align: left; border-bottom: 2px solid ${COLORS.primary};">SKU</th>
-                <th style="padding: 12px; text-align: left; border-bottom: 2px solid ${COLORS.primary};">Product</th>
-                <th style="padding: 12px; text-align: center; border-bottom: 2px solid ${COLORS.primary};">Qty</th>
-                <th style="padding: 12px; text-align: center; border-bottom: 2px solid ${COLORS.primary};">Price</th>
-                <th style="padding: 12px; text-align: center; border-bottom: 2px solid ${COLORS.primary};">Disc</th>
-                <th style="padding: 12px; text-align: right; border-bottom: 2px solid ${COLORS.primary};">Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${productsHTML}
-            </tbody>
-          </table>
-          <div style="display: flex; justify-content: flex-end; margin-top: 20px;">
-            <div style="width: 250px;">
-              <p style="display: flex; justify-content: space-between; margin: 5px 0;"><span>Sub-Total:</span> <span>${slipData.saleData?.actual_bill || 0}</span></p>
-              <p style="display: flex; justify-content: space-between; margin: 5px 0;"><span>Discount:</span> <span>${slipData.saleData?.total_discount || 0}</span></p>
-              <p style="display: flex; justify-content: space-between; margin: 5px 0;"><span>GST (18%):</span> <span>${slipData.saleData?.total_tax || 0}</span></p>
-              <h2 style="display: flex; justify-content: space-between; margin-top: 10px; padding-top: 10px; border-top: 2px solid ${COLORS.primary}; color: ${COLORS.primary};">
-                <span>Total:</span> <span>${slipData.saleData?.total_bill || 0}</span>
-              </h2>
+            <p style="margin: 5px 0; font-size: 14px;"><b>Invoice No: ${slipData.saleData?.invoice_no || 'N/A'}</b></p>
+            <p style="margin: 5px 0; font-size: 14px;">Date: ${slipData.saleData?.created_at || TRANSFORM_DATE_TIME_TO_STRING(new Date(), true)}</p>
+            <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+              <thead>
+                <tr style="background-color: #F8FAFC; color: ${COLORS.primary};">
+                  <th style="padding: 12px; text-align: left; border-bottom: 2px solid ${COLORS.primary};">SKU</th>
+                  <th style="padding: 12px; text-align: left; border-bottom: 2px solid ${COLORS.primary};">Product</th>
+                  <th style="padding: 12px; text-align: center; border-bottom: 2px solid ${COLORS.primary};">Qty</th>
+                  <th style="padding: 12px; text-align: center; border-bottom: 2px solid ${COLORS.primary};">Price</th>
+                  <th style="padding: 12px; text-align: center; border-bottom: 2px solid ${COLORS.primary};">Disc</th>
+                  <th style="padding: 12px; text-align: right; border-bottom: 2px solid ${COLORS.primary};">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${productsHTML}
+              </tbody>
+            </table>
+            <div style="display: flex; justify-content: flex-end; margin-top: 20px;">
+              <div style="width: 250px;">
+                <p style="display: flex; justify-content: space-between; margin: 5px 0;"><span>Sub-Total:</span> <span>${slipData.saleData?.actual_bill || 0}</span></p>
+                <p style="display: flex; justify-content: space-between; margin: 5px 0;"><span>Discount:</span> <span>${slipData.saleData?.total_discount || 0}</span></p>
+                <p style="display: flex; justify-content: space-between; margin: 5px 0;"><span>GST (18%):</span> <span>${slipData.saleData?.total_tax || 0}</span></p>
+                <h2 style="display: flex; justify-content: space-between; margin-top: 10px; padding-top: 10px; border-top: 2px solid ${COLORS.primary}; color: ${COLORS.primary};">
+                  <span>Total:</span> <span>${slipData.saleData?.total_bill || 0}</span>
+                </h2>
+              </div>
             </div>
           </div>
         </body>
@@ -117,13 +144,12 @@ export default function InvoiceDialog({ slipData, onClose }: InvoiceDialogProps)
     </View>
   );
 
-  const customerName = slipData.customerData?.name || slipData.usersData?.customer_name || 'N/A';
-  const cashierName = slipData.cashierData?.name || slipData.usersData?.sale_person || 'N/A';
+  const cashierName = slipData.cashierData?.name || slipData.usersData?.sale_person || '-';
 
   return (
     <View style={[styles.dialogCard, { width: dialogWidth, maxHeight: dialogMaxHeight }]}>
       <ScrollView showsVerticalScrollIndicator={true} contentContainerStyle={styles.scrollContent}>
-        
+
         {/* Purple Header Title */}
         <Text style={[styles.mainTitle, { fontSize: scaleFont(30) }]}>Sale Invoice</Text>
 
@@ -132,7 +158,7 @@ export default function InvoiceDialog({ slipData, onClose }: InvoiceDialogProps)
             <Text style={[styles.companyName, { fontSize: scaleFont(24) }]}>{slipData.companyData?.company_name || ''}</Text>
             <Text style={[styles.customerName, { fontSize: scaleFont(24) }]}>{customerName}</Text>
           </View>
-          
+
           <View style={styles.headerRow}>
             <Text style={[styles.subInfo, { fontSize: scaleFont(15) }]}>
               {slipData.companyData?.lead_street || ''} {slipData.companyData?.lead_country || ''}
@@ -173,14 +199,14 @@ export default function InvoiceDialog({ slipData, onClose }: InvoiceDialogProps)
             <Text style={[styles.tableHeaderText, { flex: 1.5, textAlign: 'right' }]}>Total</Text>
           </View>
           {(slipData.saleItemsData || []).map((item: any, index: number) => renderProductRow(item, index))}
-          
+
           {/* Total Row */}
           <View style={styles.totalSummaryRow}>
             <View style={{ flex: 7 }} />
             <Text style={[styles.totalSummaryCell, { flex: 1.5, fontWeight: '700' }]}>Sub-Total</Text>
             <Text style={[styles.totalSummaryCell, { flex: 1.5, textAlign: 'right', fontWeight: '700' }]}>{slipData.saleData?.actual_bill || 0}</Text>
           </View>
-          
+
           <View style={styles.totalSummaryRow}>
             <View style={{ flex: 7 }} />
             <Text style={[styles.totalSummaryCell, { flex: 1.5, fontWeight: '700' }]}>GST (18%)</Text>
@@ -194,7 +220,7 @@ export default function InvoiceDialog({ slipData, onClose }: InvoiceDialogProps)
             <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
               <Text style={styles.btnText}>Close</Text>
             </TouchableOpacity>
-            
+
             <TouchableOpacity style={styles.shareBtn} onPress={handleShare}>
               <Text style={styles.btnText}>Share</Text>
             </TouchableOpacity>

@@ -13,6 +13,7 @@ import { ProfileScreen } from '../Profile/ProfileScreen';
 import { POSSettingsScreen } from '../Settings/POSSettingsScreen';
 import { ShiftDetailsScreen } from '../Shift/ShiftDetailsScreen';
 import { RestaurantTableScreen } from '../Restaurant/RestaurantTableScreen';
+import RestaurantFloorsScreen from '../Restaurant/RestaurantFloorsScreen';
 import { OrderReviewScreen } from '../Orders/OrderReviewScreen';
 import { POSExpenseScreen } from '../Expenses/POSExpenseScreen';
 import { HoldSalesScreen } from '../Sales/HoldSalesScreen';
@@ -73,6 +74,8 @@ export default function DashboardScreen() {
         return <POSSettingsScreen />;
       case 'SHIFT_DETAILS':
         return <ShiftDetailsScreen />;
+      case 'RESTAURANT_FLOORS':
+        return <RestaurantFloorsScreen />;
       case 'RESTAURANT_TABLES':
         return <RestaurantTableScreen />;
       case 'ORDER_REVIEW':

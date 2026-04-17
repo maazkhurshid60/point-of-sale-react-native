@@ -1,11 +1,10 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, useWindowDimensions, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, useWindowDimensions, ActivityIndicator, Image } from 'react-native';
 import { COLORS } from '../../constants/colors';
 import { BaseSlipData, useDialogStore } from '../../store/useDialogStore';
 import { TRANSFORM_DATE_TIME_TO_STRING } from '../../utils/helpers';
 import { useCartStore } from '../../store/useCartStore';
-import * as Print from 'expo-print';
-import * as Sharing from 'expo-sharing';
+import { formatSaleResponseToSlipData } from '../../utils/invoiceMapping';
 
 interface RawBillPrintDialogProps {
   slipData: BaseSlipData;
@@ -20,7 +19,6 @@ export default function RawBillPrintDialog({ slipData, onClose }: RawBillPrintDi
 
   // Responsive breakpoints
   const isTablet = width >= 768;
-  const isMobile = !isTablet;
 
   // Dynamic values
   const dialogWidth = isTablet ? 900 : width * 0.95;
@@ -31,23 +29,18 @@ export default function RawBillPrintDialog({ slipData, onClose }: RawBillPrintDi
     return size * scale;
   };
 
-  const handleTicket = async () => {
+  const handleCash = async () => {
     setIsLoading(true);
     const result = await makeSale('cash');
     setIsLoading(false);
     if (result) {
       if (onClose) onClose();
-      // After cash sale, flutter shows the ticket/invoice
-      showDialog('INVOICE_SLIP', { 
-        slipData: {
-          saleData: result.sale || result.cashSaleData?.sale || result,
-          companyData: result.company || result.cashSaleData?.company,
-          customerData: result.customer || result.cashSaleData?.customer || slipData.customerData,
-          salesmanData: result.salesman || result.cashSaleData?.salesman || slipData.salesmanData,
-          cashierData: result.cashier || result.cashSaleData?.cashier || slipData.cashierData,
-          saleItemsData: result.sale_items || result.cashSaleData?.sale?.sale_items || [],
-          ...result
-        }
+      const slipDataStandard = formatSaleResponseToSlipData(result);
+      if (!slipDataStandard) return;
+
+      // Automatically open the Thermal Ticket view directly
+      showDialog('TICKET_SLIP', {
+        slipData: slipDataStandard
       });
     }
   };
@@ -70,7 +63,7 @@ export default function RawBillPrintDialog({ slipData, onClose }: RawBillPrintDi
   return (
     <View style={[styles.dialogCard, { width: dialogWidth, maxHeight: dialogMaxHeight }]}>
       <ScrollView showsVerticalScrollIndicator={true} contentContainerStyle={styles.scrollContent}>
-        
+
         {/* Purple Header Title */}
         <Text style={[styles.mainTitle, { fontSize: scaleFont(30) }]}>Raw Bill Print</Text>
 
@@ -79,7 +72,7 @@ export default function RawBillPrintDialog({ slipData, onClose }: RawBillPrintDi
             <Text style={[styles.companyName, { fontSize: scaleFont(24) }]}>{slipData.companyData?.company_name || ''}</Text>
             <Text style={[styles.customerName, { fontSize: scaleFont(24) }]}>{customerName}</Text>
           </View>
-          
+
           <View style={styles.headerRow}>
             <Text style={[styles.subInfo, { fontSize: scaleFont(15) }]}>
               {slipData.companyData?.lead_street || ''} {slipData.companyData?.lead_country || ''}
@@ -122,14 +115,14 @@ export default function RawBillPrintDialog({ slipData, onClose }: RawBillPrintDi
             <Text style={[styles.tableHeaderText, { flex: 1.5, textAlign: 'right' }]}>Sub-Total</Text>
           </View>
           {(slipData.products || slipData.saleItemsData || []).map((item: any, index: number) => renderProductRow(item, index))}
-          
+
           {/* Total Row */}
           <View style={styles.totalSummaryRow}>
             <View style={{ flex: 7 }} />
             <Text style={[styles.totalSummaryCell, { flex: 1.5, fontWeight: '700' }]}>Total</Text>
             <Text style={[styles.totalSummaryCell, { flex: 1.5, textAlign: 'right', fontWeight: '700' }]}>{slipData.saleData?.actual_bill || 0}</Text>
           </View>
-          
+
           <View style={styles.totalSummaryRow}>
             <View style={{ flex: 7 }} />
             <Text style={[styles.totalSummaryCell, { flex: 1.5, fontWeight: '700' }]}>GST (18%)</Text>
@@ -148,15 +141,36 @@ export default function RawBillPrintDialog({ slipData, onClose }: RawBillPrintDi
             <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
               <Text style={styles.btnText}>Close</Text>
             </TouchableOpacity>
-            
-            <TouchableOpacity style={styles.ticketBtn} onPress={handleTicket} disabled={isLoading}>
-              {isLoading ? <ActivityIndicator color="white" size="small" /> : <Text style={styles.btnText}>Ticket</Text>}
+
+            <TouchableOpacity style={styles.ticketBtn} onPress={handleCash} disabled={isLoading}>
+              {isLoading ? <ActivityIndicator color="white" size="small" /> : <Text style={styles.btnText}>Cash</Text>}
             </TouchableOpacity>
           </View>
 
           <View style={styles.totalSection}>
             <Text style={styles.totalLabel}>Grand Total </Text>
             <Text style={styles.totalValue}>{slipData.saleData?.total_bill || 0}</Text>
+          </View>
+        </View>
+
+        {/* QR & Barcode Section */}
+        <View style={styles.qrContainer}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 20 }}>
+            <View style={{ alignItems: 'center' }}>
+              <Image 
+                source={{ uri: `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent('https://ownersinventory.com/track/' + (slipData.saleData?.invoice_no || ''))}` }} 
+                style={styles.qrCode}
+              />
+              <Text style={styles.qrText}>Scan Details</Text>
+            </View>
+
+            <View style={{ alignItems: 'center' }}>
+              <Image 
+                source={{ uri: `https://bwipjs-api.metafloor.com/?bcid=code128&text=${encodeURIComponent(slipData.saleData?.invoice_no || 'BILL-PREVIEW')}&scale=2&rotate=N&includetext` }} 
+                style={styles.barcodeImage}
+              />
+              <Text style={styles.qrText}>Invoice Barcode</Text>
+            </View>
           </View>
         </View>
 
@@ -170,6 +184,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ebebeb',
     borderRadius: 15,
     padding: 30,
+    width: '100%',
     elevation: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },
@@ -309,5 +324,27 @@ const styles = StyleSheet.create({
   },
   cellBold: {
     fontWeight: '700',
+  },
+  qrContainer: {
+    alignItems: 'center',
+    marginTop: 20,
+    paddingTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#e2e8f0',
+  },
+  qrCode: {
+    width: 100,
+    height: 100,
+  },
+  barcodeImage: {
+    width: 180,
+    height: 70,
+    resizeMode: 'contain',
+  },
+  qrText: {
+    marginTop: 8,
+    fontSize: 12,
+    color: '#64748b',
+    fontWeight: '500',
   },
 });

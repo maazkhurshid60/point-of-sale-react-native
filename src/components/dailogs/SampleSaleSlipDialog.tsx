@@ -16,7 +16,7 @@ export default function SampleSaleSlipDialog({ slipData, onClose }: SampleSaleSl
 
   // Responsive breakpoints
   const isTablet = width >= 768;
-  
+
   // Dynamic values
   const dialogWidth = isTablet ? 900 : width * 0.95;
   const dialogMaxHeight = height * 0.9;
@@ -25,6 +25,9 @@ export default function SampleSaleSlipDialog({ slipData, onClose }: SampleSaleSl
     const scale = isTablet ? 1.2 : 1;
     return size * scale;
   };
+
+  const customerName = slipData.customerData?.name || slipData.usersData?.customer_name || 'N/A';
+  const cashierName = slipData.cashierData?.name || slipData.usersData?.sale_person || 'N/A';
 
   const generateHTML = () => {
     const productsHTML = (slipData.saleItemsData || []).map((item: any) => `
@@ -37,36 +40,61 @@ export default function SampleSaleSlipDialog({ slipData, onClose }: SampleSaleSl
 
     return `
       <html>
-        <body style="font-family: Arial, sans-serif; padding: 40px; color: #1E293B;">
-          <div style="text-align: center; margin-bottom: 20px;">
-            <h1 style="margin: 0; color: ${COLORS.primary}; text-transform: uppercase;">Sample Sale Slip</h1>
-          </div>
-          <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
-            <div>
-              <h2 style="margin: 0;">${slipData.companyData?.company_name || 'Owner Inventory'}</h2>
-              <p style="margin: 5px 0; font-size: 14px;">${slipData.companyData?.lead_street || ''}</p>
-              <p style="margin: 5px 0; font-size: 14px;">${slipData.companyData?.lead_contact || ''}</p>
+        <head>
+          <style>
+            body { 
+              font-family: Arial, sans-serif; 
+              margin: 0; 
+              padding: 0; 
+              background-color: #f1f5f9;
+              display: flex;
+              justify-content: center;
+            }
+            .invoice-container {
+              width: 210mm;
+              padding: 40px;
+              background-color: white;
+              color: #1E293B;
+              box-sizing: border-box;
+            }
+            @media print {
+              body { background-color: white; }
+              .invoice-container { width: 100%; padding: 20px; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="invoice-container">
+            <div style="text-align: center; margin-bottom: 20px;">
+              <h1 style="margin: 0; color: ${COLORS.primary}; text-transform: uppercase;">Sample Sale Slip</h1>
             </div>
-            <div style="text-align: right;">
-              <h2 style="margin: 0; color: ${COLORS.primary};">Customer:</h2>
-              <p style="margin: 5px 0; font-size: 16px;"><b>${customerName}</b></p>
-              <p style="margin: 5px 0; font-size: 14px;">ID: ${slipData.customerData?.id || ''}</p>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+              <div>
+                <h2 style="margin: 0;">${slipData.companyData?.company_name || 'Owner Inventory'}</h2>
+                <p style="margin: 5px 0; font-size: 14px;">${slipData.companyData?.lead_street || ''}</p>
+                <p style="margin: 5px 0; font-size: 14px;">${slipData.companyData?.lead_contact || ''}</p>
+              </div>
+              <div style="text-align: right;">
+                <h2 style="margin: 0; color: ${COLORS.primary};">Customer:</h2>
+                <p style="margin: 5px 0; font-size: 16px;"><b>${customerName}</b></p>
+                <p style="margin: 5px 0; font-size: 14px;">ID: ${slipData.customerData?.id || ''}</p>
+              </div>
             </div>
+            <p style="margin: 5px 0; font-size: 14px;"><b>Sample No: ${slipData.saleData?.invoice_no || 'N/A'}</b></p>
+            <p style="margin: 5px 0; font-size: 14px;">Date: ${slipData.saleData?.created_at || TRANSFORM_DATE_TIME_TO_STRING(new Date(), true)}</p>
+            <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+              <thead>
+                <tr style="background-color: #F8FAFC; color: ${COLORS.primary};">
+                  <th style="padding: 12px; text-align: left; border-bottom: 2px solid ${COLORS.primary};">SKU</th>
+                  <th style="padding: 12px; text-align: left; border-bottom: 2px solid ${COLORS.primary};">Product</th>
+                  <th style="padding: 12px; text-align: center; border-bottom: 2px solid ${COLORS.primary};">Qty</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${productsHTML}
+              </tbody>
+            </table>
           </div>
-          <p style="margin: 5px 0; font-size: 14px;"><b>Sample No: ${slipData.saleData?.invoice_no || 'N/A'}</b></p>
-          <p style="margin: 5px 0; font-size: 14px;">Date: ${slipData.saleData?.created_at || TRANSFORM_DATE_TIME_TO_STRING(new Date(), true)}</p>
-          <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
-            <thead>
-              <tr style="background-color: #F8FAFC; color: ${COLORS.primary};">
-                <th style="padding: 12px; text-align: left; border-bottom: 2px solid ${COLORS.primary};">SKU</th>
-                <th style="padding: 12px; text-align: left; border-bottom: 2px solid ${COLORS.primary};">Product</th>
-                <th style="padding: 12px; text-align: center; border-bottom: 2px solid ${COLORS.primary};">Qty</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${productsHTML}
-            </tbody>
-          </table>
         </body>
       </html>
     `;
@@ -97,13 +125,11 @@ export default function SampleSaleSlipDialog({ slipData, onClose }: SampleSaleSl
     </View>
   );
 
-  const customerName = slipData.customerData?.name || slipData.usersData?.customer_name || 'N/A';
-  const cashierName = slipData.cashierData?.name || slipData.usersData?.sale_person || 'N/A';
 
   return (
     <View style={[styles.dialogCard, { width: dialogWidth, maxHeight: dialogMaxHeight }]}>
       <ScrollView showsVerticalScrollIndicator={true} contentContainerStyle={styles.scrollContent}>
-        
+
         <Text style={[styles.mainTitle, { fontSize: scaleFont(30) }]}>Sample Sale Slip</Text>
 
         <View style={styles.headerInfo}>
@@ -111,7 +137,7 @@ export default function SampleSaleSlipDialog({ slipData, onClose }: SampleSaleSl
             <Text style={[styles.companyName, { fontSize: scaleFont(24) }]}>{slipData.companyData?.company_name || ''}</Text>
             <Text style={[styles.customerName, { fontSize: scaleFont(24) }]}>{customerName}</Text>
           </View>
-          
+
           <View style={styles.headerRow}>
             <Text style={[styles.subInfo, { fontSize: scaleFont(15) }]}>
               {slipData.companyData?.lead_street || ''} {slipData.companyData?.lead_country || ''}
@@ -149,7 +175,7 @@ export default function SampleSaleSlipDialog({ slipData, onClose }: SampleSaleSl
             <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
               <Text style={styles.btnText}>Close</Text>
             </TouchableOpacity>
-            
+
             <TouchableOpacity style={styles.shareBtn} onPress={handleShare}>
               <Text style={styles.btnText}>Share</Text>
             </TouchableOpacity>
@@ -283,5 +309,8 @@ const styles = StyleSheet.create({
     color: 'white',
     fontWeight: '500',
     fontSize: 15,
+  },
+  cellBold: {
+    fontWeight: '700',
   },
 });

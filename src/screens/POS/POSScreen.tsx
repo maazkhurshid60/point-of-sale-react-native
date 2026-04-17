@@ -16,6 +16,7 @@ import { CartItemRow } from '../../components/billing/CartItemRow';
 import { useDialogStore } from '../../store/useDialogStore';
 import { ProductsListing } from '../../components/catalog/ProductsListing';
 import { COLORS } from '../../constants/colors';
+import { formatSaleResponseToSlipData } from '../../utils/invoiceMapping';
 
 export default function POSScreen() {
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
@@ -56,20 +57,14 @@ export default function POSScreen() {
 
     const result = await makeSale(type);
     if (result) {
-      const authState = useAuthStore.getState();
-      const slipData = {
-        saleData: result.sale || result.quotation || result,
-        companyData: result.company,
-        customerData: result.customer || result.customer_details || { name: selectedCustomer },
-        salesmanData: result.salesman || selectedSalesman || currentShift?.salesman_name,
-        cashierData: result.cashier || authState.currentUser,
-        saleItemsData: result.sale_items || result.quotation_items || [],
-        ...result
-      };
+      const slipData = formatSaleResponseToSlipData(result);
+      if (!slipData) return;
+
+      console.log(`[POSScreen] Final standardized slipData for dialog:`, JSON.stringify(slipData));
 
       switch (type) {
         case 'print-invoice':
-          showDialog('INVOICE_SLIP', { slipData });
+          showDialog('TICKET_SLIP', { slipData });
           break;
         case 'print-bill':
           showDialog('RAW_BILL_SLIP', { slipData });
@@ -248,8 +243,8 @@ export default function POSScreen() {
             <Text style={styles.btnText}>Payment</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity 
-            style={styles.cashButton} 
+          <TouchableOpacity
+            style={styles.cashButton}
             onPress={() => handleMoreAction('print-invoice')}
           >
             <View style={styles.cashLeft}>

@@ -153,8 +153,19 @@ export const useCartStore = create<CartState>((set, get) => ({
       selling_price: item.selling_price,
       price: item.selling_price,
       discount: item.discount || 0,
+      discount_amount: item.discount || 0,  // Backend foreach line 95
       total: item.selling_price * item.quantity,
       subtotal: item.selling_price * item.quantity,
+      comments: 'N/A',          // Backend foreach line 189
+      enable_comments: 0,        // Backend foreach line 190
+      note: '',
+      notes: '',
+      serial_number: '',  
+      expiry_date: null,
+      warehouse_id: null,
+      tax: 0,
+      tax_amount: 0,
+      tax_rate: 0,
     }));
 
     const cashId = auth.selectedCashAccount?.id || auth.selectedCashAccountId || 0;
@@ -164,47 +175,53 @@ export const useCartStore = create<CartState>((set, get) => ({
       shift_id: shiftId,
       store_id: storeId,
       customer_id: selectedCustomerId,
-      products: JSON.stringify(products),
+      products: products,
       discount_type: auth.softwareSettings?.discount_type || 'amount',
       discount_policy: auth.softwareSettings?.discount_policy || 'overall', // Added
       overall_discount: discountAmount,
-      total_discount: discountAmount, // Some endpoints use total_discount
+      total_discount: discountAmount,   // Some endpoints use total_discount
+      discount_amount: discountAmount,  // DataController.php line 95 expects this key
       type: 'payment_checkout',
       draft_enabled: currentSaleId ? 1 : null,
       draft_id: currentSaleId,
 
       // Shotgun approach for account IDs to satisfy different controller requirements
-      account_id: cashId, 
+      account_id: cashId,
       casher_account_id: cashId,
       default_cash_account: cashId,
-      cash_account_id: cashId, 
-      cash_account: cashId,    
-      cash_id: cashId,         
+      cash_account_id: cashId,
+      cash_account: cashId,
+      cash_id: cashId,
       cashier_account: cashId, // Added correct spelling
-      casher_account: cashId,  
+      casher_account: cashId,
       casher_id: cashId,       // Added
       cashier_id: cashId,      // Added
       shift_cash_account_id: cashId, // Added
       payment_account_id: cashId,
       payment_method_id: 1,    // Added common default for Cash
-      payment_type: 'cash',    
-      
+      payment_type: 'cash',
+
       bank_account_id: bankId,
       default_bank_account: bankId,
-      bank_id: bankId,         
+      bank_id: bankId,
 
       // Often required: A structured payments array
-      payments: JSON.stringify([{
+      payments: [{
         account_id: cashId,
         amount: get().totalToPay,
         method: 'cash',
         method_id: 1
-      }]),
+      }],
 
       // Additional fields often required for 403 prevention
       paid_in: get().totalToPay,
       paying_amount: get().totalToPay,
-      status: 'final'
+      status: 'final',
+
+      // Notes/comments field — backend reads $request['comments'] at line 189
+      comments: '',
+      note: '',
+      notes: '',
     };
 
     console.log(`[makeSale] Attempting ${type} sale with expanded payload:`, JSON.stringify(data));
@@ -284,7 +301,7 @@ export const useCartStore = create<CartState>((set, get) => ({
     const data = {
       shift_id: shiftId,
       customer_id: customerId,
-      products: JSON.stringify(products),
+      products: products,
       discount_type: 'amount', // default
       overall_discount: discountAmount,
       draft_enabled: 1,

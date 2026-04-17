@@ -32,6 +32,7 @@ export type DialogType =
   | 'GOODS_ISSUANCE_SLIP'
   | 'SAMPLE_SALE_SLIP'
   | 'RAW_BILL_SLIP'
+  | 'TICKET_SLIP'
   | 'UPLOAD_OFFLINE_SALES'
   | 'DASHBOARD_HELP'
   | 'GENERATE_COUPON'
@@ -64,6 +65,7 @@ export interface DialogDataMap {
   GOODS_ISSUANCE_SLIP: { slipData: BaseSlipData; onClose?: () => void };
   SAMPLE_SALE_SLIP: { slipData: BaseSlipData; onClose?: () => void };
   RAW_BILL_SLIP: { slipData: BaseSlipData; onClose?: () => void };
+  TICKET_SLIP: { slipData: BaseSlipData; onClose?: () => void };
   UPLOAD_OFFLINE_SALES: { onClose?: () => void };
   DASHBOARD_HELP: { onClose?: () => void };
   GENERATE_COUPON: { onGenerate?: (coupon: Coupon) => void };

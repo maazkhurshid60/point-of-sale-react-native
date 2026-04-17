@@ -33,8 +33,8 @@ export default function GoodsDeliverySlipDialog({ slipData, onClose }: GoodsDeli
   const generateHTML = () => {
     const productsHTML = (slipData.saleItemsData || []).map((item: any) => `
       <tr>
-        <td style="padding: 10px; border-bottom: 1px solid #E2E8F0;">${item.product?.sku || ''}</td>
-        <td style="padding: 10px; border-bottom: 1px solid #E2E8F0;">${item.product?.product_name || ''}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #E2E8F0;">${item.sku || ''}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #E2E8F0;">${item.product_name || item.name || ''}</td>
         <td style="padding: 10px; border-bottom: 1px solid #E2E8F0; text-align: center;">${item.qty || 0}</td>
         <td style="padding: 10px; border-bottom: 1px solid #E2E8F0; text-align: center;"></td>
       </tr>
@@ -42,41 +42,66 @@ export default function GoodsDeliverySlipDialog({ slipData, onClose }: GoodsDeli
 
     return `
       <html>
-        <body style="font-family: Arial, sans-serif; padding: 40px; color: #1E293B;">
-          <div style="text-align: center; margin-bottom: 40px;">
-            <h1 style="margin: 0; color: ${COLORS.primary}; text-transform: uppercase;">Goods Delivery Slip</h1>
-          </div>
-          <div style="display: flex; justify-content: space-between; margin-bottom: 40px;">
-            <div>
-              <h2 style="margin: 0;">${slipData.companyData?.company_name || ''}</h2>
-              <p style="margin: 5px 0; font-size: 14px;">${slipData.companyData?.lead_street || ''}</p>
-              <p style="margin: 5px 0; font-size: 14px;">${slipData.companyData?.lead_contact || ''}</p>
+        <head>
+          <style>
+            body { 
+              font-family: Arial, sans-serif; 
+              margin: 0; 
+              padding: 0; 
+              background-color: #f1f5f9;
+              display: flex;
+              justify-content: center;
+            }
+            .invoice-container {
+              width: 210mm;
+              padding: 40px;
+              background-color: white;
+              color: #1E293B;
+              box-sizing: border-box;
+            }
+            @media print {
+              body { background-color: white; }
+              .invoice-container { width: 100%; padding: 20px; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="invoice-container">
+            <div style="text-align: center; margin-bottom: 40px;">
+              <h1 style="margin: 0; color: ${COLORS.primary}; text-transform: uppercase;">Goods Delivery Slip</h1>
             </div>
-            <div style="text-align: right;">
-              <h2 style="margin: 0;">${slipData.customerData?.name || ''}</h2>
-              <p style="margin: 5px 0; font-size: 14px;">Customer ID: ${slipData.customerData?.customer_id || ''}</p>
-              <p style="margin: 5px 0; font-size: 14px;">Invoice No: <b>${slipData.saleData?.invoice_no || ''}</b></p>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 40px;">
+              <div>
+                <h2 style="margin: 0;">${slipData.companyData?.company_name || ''}</h2>
+                <p style="margin: 5px 0; font-size: 14px;">${slipData.companyData?.lead_street || ''}</p>
+                <p style="margin: 5px 0; font-size: 14px;">${slipData.companyData?.lead_contact || ''}</p>
+              </div>
+              <div style="text-align: right;">
+                <h2 style="margin: 0;">${slipData.customerData?.name || ''}</h2>
+                <p style="margin: 5px 0; font-size: 14px;">Customer ID: ${slipData.customerData?.customer_id || ''}</p>
+                <p style="margin: 5px 0; font-size: 14px;">Invoice No: <b>${slipData.saleData?.invoice_no || ''}</b></p>
+              </div>
             </div>
-          </div>
-          <table style="width: 100%; border-collapse: collapse; margin-bottom: 60px;">
-            <thead>
-              <tr style="background-color: #F8FAFC;">
-                <th style="padding: 12px; text-align: left; border-bottom: 2px solid #E2E8F0;">SKU</th>
-                <th style="padding: 12px; text-align: left; border-bottom: 2px solid #E2E8F0;">Product</th>
-                <th style="padding: 12px; text-align: center; border-bottom: 2px solid #E2E8F0;">Ordered Qty</th>
-                <th style="padding: 12px; text-align: center; border-bottom: 2px solid #E2E8F0;">Received Qty</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${productsHTML}
-            </tbody>
-          </table>
-          <div style="display: flex; justify-content: space-between; margin-top: 100px;">
-            <div style="width: 200px; text-align: center; border-top: 1px solid #94A3B8; padding-top: 10px;">
-              Receiver Signature
-            </div>
-            <div style="width: 200px; text-align: center; border-top: 1px solid #94A3B8; padding-top: 10px;">
-              Dispatcher Signature
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 60px;">
+              <thead>
+                <tr style="background-color: #F8FAFC;">
+                  <th style="padding: 12px; text-align: left; border-bottom: 2px solid #E2E8F0;">SKU</th>
+                  <th style="padding: 12px; text-align: left; border-bottom: 2px solid #E2E8F0;">Product</th>
+                  <th style="padding: 12px; text-align: center; border-bottom: 2px solid #E2E8F0;">Ordered Qty</th>
+                  <th style="padding: 12px; text-align: center; border-bottom: 2px solid #E2E8F0;">Received Qty</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${productsHTML}
+              </tbody>
+            </table>
+            <div style="display: flex; justify-content: space-between; margin-top: 100px;">
+              <div style="width: 200px; text-align: center; border-top: 1px solid #94A3B8; padding-top: 10px;">
+                Receiver Signature
+              </div>
+              <div style="width: 200px; text-align: center; border-top: 1px solid #94A3B8; padding-top: 10px;">
+                Dispatcher Signature
+              </div>
             </div>
           </div>
         </body>
@@ -103,8 +128,8 @@ export default function GoodsDeliverySlipDialog({ slipData, onClose }: GoodsDeli
   const renderProductRow = ({ item, index }: { item: any, index: number }) => {
     return (
       <View key={index} style={styles.tableRow}>
-        <Text style={[styles.tableCell, { flex: 1.5, fontSize: scaleFont(14) }]}>{item.product?.sku || ''}</Text>
-        <Text style={[styles.tableCell, { flex: 3, fontSize: scaleFont(14) }]} numberOfLines={1}>{item.product?.product_name || ''}</Text>
+        <Text style={[styles.tableCell, { flex: 1.5, fontSize: scaleFont(14) }]}>{item.sku || ''}</Text>
+        <Text style={[styles.tableCell, { flex: 3, fontSize: scaleFont(14) }]} numberOfLines={1}>{item.product_name || item.name || ''}</Text>
         <Text style={[styles.tableCell, styles.cellBold, { flex: 2, textAlign: 'center', fontSize: scaleFont(14) }]}>{item.qty || 0}</Text>
         <Text style={[styles.tableCell, styles.cellBold, { flex: 2, textAlign: 'center', fontSize: scaleFont(14) }]}></Text>
       </View>
@@ -192,25 +217,18 @@ export default function GoodsDeliverySlipDialog({ slipData, onClose }: GoodsDeli
             </View>
           </View>
 
-          <View style={[styles.actions, { gap: 10, flexDirection: isMobile ? 'column' : 'row' }]}>
-            <TouchableOpacity
-              style={[styles.closeBtn, { paddingVertical: scaleFont(12), flex: isMobile ? 0 : 1, minHeight: 45 }]}
-              onPress={onClose}
-            >
-              <Text style={[styles.closeBtnText, { fontSize: scaleFont(14) }]}>Close</Text>
-            </TouchableOpacity>
-            <View style={{ flexDirection: 'row', gap: 10, width: isMobile ? '100%' : 'auto', flex: isMobile ? 0 : 1.5 }}>
-              <TouchableOpacity
-                style={[styles.shareBtn, { paddingVertical: scaleFont(12), flex: 1, minHeight: 45 }]}
-                onPress={handleShare}
-              >
-                <Text style={[styles.shareBtnText, { fontSize: scaleFont(14) }]}>Share</Text>
+          <View style={styles.footer}>
+            <View style={styles.footerButtons}>
+              <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
+                <Text style={styles.btnText}>Close</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.printBtn, { paddingVertical: scaleFont(12), flex: 1.2, minHeight: 45 }]}
-                onPress={handlePrint}
-              >
-                <Text style={[styles.printBtnText, { fontSize: scaleFont(14) }]}>Print</Text>
+
+              <TouchableOpacity style={styles.shareBtn} onPress={handleShare}>
+                <Text style={styles.btnText}>Share</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.printBtn} onPress={handlePrint}>
+                <Text style={styles.btnText}>Print</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -351,43 +369,51 @@ const styles = StyleSheet.create({
     fontFamily: 'Montserrat',
     fontWeight: '600',
   },
-  actions: {
+  footer: {
+    marginTop: 20,
+    paddingTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+  },
+  footerButtons: {
     flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 12,
+  },
+  btnText: {
+    color: 'white',
+    fontWeight: '700',
+    fontFamily: 'Montserrat',
+    fontSize: 14,
   },
   closeBtn: {
     backgroundColor: COLORS.posRed,
-    borderRadius: 12,
-    elevation: 4,
+    paddingVertical: 12,
+    paddingHorizontal: 25,
+    borderRadius: 10,
+    minWidth: 100,
+    alignItems: 'center',
     justifyContent: 'center',
-  },
-  closeBtnText: {
-    color: COLORS.white,
-    fontWeight: '700',
-    fontFamily: 'Montserrat',
-    textAlign: 'center',
+    elevation: 2,
   },
   printBtn: {
     backgroundColor: COLORS.primary,
-    borderRadius: 12,
-    elevation: 4,
+    paddingVertical: 12,
+    paddingHorizontal: 25,
+    borderRadius: 10,
+    minWidth: 100,
+    alignItems: 'center',
     justifyContent: 'center',
-  },
-  printBtnText: {
-    color: COLORS.white,
-    fontWeight: '700',
-    fontFamily: 'Montserrat',
-    textAlign: 'center',
+    elevation: 2,
   },
   shareBtn: {
     backgroundColor: '#475569',
-    borderRadius: 12,
-    elevation: 4,
+    paddingVertical: 12,
+    paddingHorizontal: 25,
+    borderRadius: 10,
+    minWidth: 100,
+    alignItems: 'center',
     justifyContent: 'center',
-  },
-  shareBtnText: {
-    color: COLORS.white,
-    fontWeight: '700',
-    fontFamily: 'Montserrat',
-    textAlign: 'center',
+    elevation: 2,
   },
 });
