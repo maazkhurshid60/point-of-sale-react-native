@@ -26,14 +26,24 @@ export default function RestaurantFloorsScreen() {
 
   const handleAddFloor = async () => {
     setIsLoading(true);
-    useAuthStore.getState().addFloor();
-    const result = await useAuthStore.getState().saveFloorLayout();
-    setIsLoading(false);
+    const store = useAuthStore.getState();
+    const newFloor = store.addFloor();
+    const result = await store.saveFloorLayout();
     
     if (result.success) {
+      // Re-fetch everything to ensure all IDs are server-confirmed
+      await fetchFloors();
+      // Find the floor we just added in the refreshed list
+      const refreshedFloor = useAuthStore.getState().listOfFloors.find(f => f.floorNo === newFloor.floorNo);
+      if (refreshedFloor) {
+        await store.fetchFloorDetails(refreshedFloor.floorId);
+        store.setCurrentFloor(refreshedFloor);
+      }
+      setIsLoading(false);
       setScreen('RESTAURANT_TABLES');
     } else {
-      Alert.alert("Error", "Could not create floor: " + result.message);
+      setIsLoading(false);
+      Alert.alert("Error", "Could not create floor: " + (result.message || "Server Error"));
     }
   };
 

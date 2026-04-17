@@ -126,13 +126,16 @@ const DraggableTable: React.FC<TableProps> = ({ table, onSelect, onUpdatePositio
     ],
   }));
 
+  const resizeContext = useSharedValue({ w: table.width, h: table.height });
+
   const resizeGesture = Gesture.Pan()
     .onStart(() => {
+      resizeContext.value = { w: table.width, h: table.height };
       runOnJS(onSelect)(table.tableId);
     })
     .onUpdate((event) => {
-      const newWidth = Math.max(TABLE_MIN_SIZE, table.width + event.translationX);
-      const newHeight = Math.max(TABLE_MIN_SIZE, table.height + event.translationY);
+      const newWidth = Math.max(TABLE_MIN_SIZE, resizeContext.value.w + event.translationX);
+      const newHeight = Math.max(TABLE_MIN_SIZE, resizeContext.value.h + event.translationY);
       runOnJS(onUpdateSize)(table.tableId, newWidth, newHeight);
     });
 
@@ -231,6 +234,7 @@ export const RestaurantTableScreen: React.FC = () => {
   const store = useAuthStore();
   const setScreen = useUIStore((state) => state.setScreen);
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoadingFloor, setIsLoadingFloor] = useState<number | null>(null);
 
   const selectedTable = store.listOfTables.find(t => t.isSelected);
   const selectedDecoration = store.listofdecorations.find(d => d.isSelected);
@@ -262,10 +266,15 @@ export const RestaurantTableScreen: React.FC = () => {
   const handleSave = async () => {
     setIsSaving(true);
     const result = await store.saveFloorLayout();
-    setIsSaving(false);
     if (result.success) {
+      if (store.currentFloor) {
+        // FORCE a fresh fetch after save to sync all IDs and items accurately
+        await store.fetchFloorDetails(store.currentFloor.floorId);
+      }
+      setIsSaving(false);
       Alert.alert("Success", "Restaurant layout saved successfully!");
     } else {
+      setIsSaving(false);
       Alert.alert("Error", result.message || "Failed to save restaurant layout. Please try again.");
     }
   };
@@ -279,7 +288,7 @@ export const RestaurantTableScreen: React.FC = () => {
           </View>
           <Text style={styles.backText}>Floors</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Floor Editor</Text>
+        <Text style={styles.headerTitle}>{store.currentFloor?.floorName || 'Floor Editor'}</Text>
         <View style={styles.headerActions}>
           <TouchableOpacity
             style={[styles.topSaveBtn, isSaving && { opacity: 0.7 }]}
@@ -458,26 +467,6 @@ export const RestaurantTableScreen: React.FC = () => {
         </View>
 
         <View style={styles.properCanvas}>
-          <View style={styles.floorPills}>
-            {store.listOfFloors.map((floor) => (
-              <TouchableOpacity
-                key={floor.floorId}
-                style={[
-                  styles.floorPill,
-                  store.currentFloor?.floorId === floor.floorId && styles.activeFloorPill,
-                ]}
-                onPress={() => store.setCurrentFloor(floor)}
-              >
-                <Text style={[
-                  styles.floorPillText,
-                  store.currentFloor?.floorId === floor.floorId && styles.activeFloorPillText,
-                ]}>
-                  {floor.floorName}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
           <ImageBackground source={FLOOR_BG} style={styles.properFloor} imageStyle={{ opacity: 0.1 }}>
             {tablesInCurrentFloor.map((table) => (
               <DraggableTable
@@ -555,11 +544,9 @@ const styles = StyleSheet.create({
   properEmptyText: { color: '#A0AEC0', ...TYPOGRAPHY.montserrat.medium, fontSize: 11, textAlign: 'center', marginTop: 10 },
   subText: { color: 'white', ...TYPOGRAPHY.montserrat.medium, fontSize: 12, marginBottom: 5 },
   properCanvas: { flex: 1, padding: 20 },
-  floorPills: { flexDirection: 'row', marginBottom: 20, gap: 10 },
-  floorPill: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 12, backgroundColor: 'white' },
-  activeFloorPill: { backgroundColor: '#6750A4' },
-  floorPillText: { ...TYPOGRAPHY.montserrat.bold, fontSize: 13, color: '#4A5568' },
-  activeFloorPillText: { color: 'white' },
+  floorHeaderSolid: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'white', paddingHorizontal: 20, paddingVertical: 12, borderRadius: 12, marginBottom: 15, alignSelf: 'flex-start', borderWidth: 1, borderColor: '#E2E8F0', gap: 10 },
+  floorStatusDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#48BB78' },
+  floorNameTitle: { ...TYPOGRAPHY.montserrat.bold, fontSize: 14, color: '#2D3748' },
   properFloor: { flex: 1, backgroundColor: 'white', borderRadius: 20, borderWidth: 1, borderColor: '#E2E8F0', overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 3 },
   tableContainer: { position: 'absolute', backgroundColor: '#C1873F', justifyContent: 'center', alignItems: 'center', elevation: 5, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2 },
   tableText: { ...TYPOGRAPHY.montserrat.bold, fontSize: 11, color: 'rgba(0,0,0,0.8)', textAlign: 'center' },

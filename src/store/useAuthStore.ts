@@ -849,8 +849,8 @@ export const useAuthStore = create<AuthState>()(
           listOfFloors: state.listOfFloors.map((f) =>
             f.floorId === floorId ? { ...f, noOfTable: capacity } : f
           ),
-          currentFloor: state.currentFloor?.floorId === floorId 
-            ? { ...state.currentFloor, noOfTable: capacity } 
+          currentFloor: state.currentFloor?.floorId === floorId
+            ? { ...state.currentFloor, noOfTable: capacity }
             : state.currentFloor
         }));
       },
@@ -883,7 +883,7 @@ export const useAuthStore = create<AuthState>()(
           });
 
           if (res.data) {
-            set({ 
+            set({
               lastResponseKeys: Object.keys(res.data).join(', '),
               lastResponseFloor: res.data.floor
             } as any);
@@ -927,14 +927,19 @@ export const useAuthStore = create<AuthState>()(
               title: d.name,
               x: Number(d.x_axis || 0),
               y: Number(d.y_axis || 0),
-              width: 100,
-              height: 100,
+              width: 60,
+              height: 60,
               isSelected: false,
             }));
 
+            const state = get();
+            // Safely merge: Keep tables/decorations from other floors, replace only for this floor
+            const otherTables = state.listOfTables.filter(t => Number(t.floorid) !== Number(id));
+            const otherDecos = state.listofdecorations.filter(d => Number(d.floor) !== Number(id));
+
             set({
-              listOfTables: mappedTables,
-              listofdecorations: mappedDecorations
+              listOfTables: [...otherTables, ...mappedTables],
+              listofdecorations: [...otherDecos, ...mappedDecorations]
             });
             return true;
           }
@@ -952,19 +957,20 @@ export const useAuthStore = create<AuthState>()(
               id: f.floorId > 1000000000 ? 0 : f.floorId,
               name: f.floorName,
               floor_no: f.floorNo,
-              tables_capacity: (f.noOfTable || 0).toString(),
+              tables_capacity: (f.noOfTable || 10).toString(),
               store_id: f.storeid || 1,
               remarks: ""
             })),
-            tables: state.listOfTables.map(t => ({
+            // ONLY send tables/decos that belong to floors we actually have in our list
+            tables: state.listOfTables.filter(t => state.listOfFloors.some(f => f.floorId === t.floorid)).map(t => ({
               id: t.tableId > 1000000000 ? 0 : t.tableId,
               floor_id: t.floorid > 1000000000 ? 0 : t.floorid,
               name: t.tableName,
               table_chairs: (t.chairsCount || 0).toString(),
               x_axis: t.x.toString(),
               y_axis: t.y.toString(),
-              height: t.height.toString(),
-              width: t.width.toString(),
+              height: Math.round(t.height || 80).toString(),
+              width: Math.round(t.width || 120).toString(),
               is_round: t.isRounded ? 1 : 0,
               rotation: t.rotation.toString(),
               list_of_chairs: t.listofChairs,
@@ -972,7 +978,7 @@ export const useAuthStore = create<AuthState>()(
               remarks: ""
             })),
             // Send both keys to handle server inconsistency/typos
-            decroation: state.listofdecorations.map(d => ({
+            decroation: state.listofdecorations.filter(d => state.listOfFloors.some(f => f.floorId === d.floor)).map(d => ({
               id: d.id > 1000000000 ? 0 : d.id,
               floor_id: d.floor > 1000000000 ? 0 : d.floor,
               name: d.title,
@@ -980,7 +986,7 @@ export const useAuthStore = create<AuthState>()(
               y_axis: d.y.toString(),
               remarks: ""
             })),
-            decorations: state.listofdecorations.map(d => ({
+            decorations: state.listofdecorations.filter(d => state.listOfFloors.some(f => f.floorId === d.floor)).map(d => ({
               id: d.id > 1000000000 ? 0 : d.id,
               floor_id: d.floor > 1000000000 ? 0 : d.floor,
               name: d.title,
@@ -1000,7 +1006,7 @@ export const useAuthStore = create<AuthState>()(
             const source = Array.isArray(rawFloor) ? rawFloor[0] : (rawFloor || data);
 
             const resFloors = Array.isArray(data.floors) ? data.floors : (rawFloor ? (Array.isArray(rawFloor) ? rawFloor : [rawFloor]) : []);
-            
+
             // Handle server typos and plural/singular variations
             const resTables = source.tables || data.tables || source.table || [];
             const resDecorations = source.decroation || source.decoration || source.decorations || data.decroation || data.decoration || data.decorations || [];
@@ -1020,8 +1026,8 @@ export const useAuthStore = create<AuthState>()(
               floorid: Number(t.floor_id || (source.id) || 0),
               x: Number(t.x_axis || 0),
               y: Number(t.y_axis || 0),
-              width: Number(t.width || 100),
-              height: Number(t.height || 60),
+              width: Number(t.width || 120),
+              height: Number(t.height || 80),
               isRounded: t.is_round === 1 || t.is_round === true,
               rotation: Number(t.rotation || 0),
               chairsCount: Number(t.table_chairs || 0),
@@ -1043,21 +1049,44 @@ export const useAuthStore = create<AuthState>()(
               title: d.name,
               x: Number(d.x_axis || 0),
               y: Number(d.y_axis || 0),
-              width: 50,
-              height: 50,
+              width: 60,
+              height: 60,
               isSelected: false
             }));
 
-            // Crucially: If we have mapped floors, use them. If not, don't nuke the existing ones.
+            // Safely merge logic for save
+            // We need to map old temp IDs to new server IDs to avoid orphaning tables
             const newList = mappedFloors.length > 0 ? mappedFloors : state.listOfFloors;
 
-            set({
-              listOfFloors: newList,
-              listOfTables: mappedTables,
-              listofdecorations: mappedDecorations
+            // Create a map of floorNo -> realId for the response floors
+            const floorNoToRealId = new Map(mappedFloors.map(f => [f.floorNo, f.floorId]));
+
+            // Clean up old tables for the floors we just received updates for
+            const responseFloorIds = new Set(mappedFloors.map(f => f.floorId));
+            const otherTables = state.listOfTables.filter(t => {
+              const isOldTempId = t.floorid > 1000000000;
+              // If it's a temp ID, check if its floor name matches a floor we just updated
+              if (isOldTempId) {
+                const floor = state.listOfFloors.find(f => f.floorId === t.floorid);
+                if (floor && floorNoToRealId.has(floor.floorNo)) return false; // Remove, we'll use server's tables
+              }
+              return !responseFloorIds.has(Number(t.floorid));
             });
 
-            // Update currentFloor reference if it was a new floor
+            const otherDecos = state.listofdecorations.filter(d => {
+              const isOldTempId = d.floor > 1000000000;
+              if (isOldTempId) {
+                const floor = state.listOfFloors.find(f => f.floorId === d.floor);
+                if (floor && floorNoToRealId.has(floor.floorNo)) return false;
+              }
+              return !responseFloorIds.has(Number(d.floor));
+            });
+
+            // SAFE SYNC: Only update the floors list. 
+            // DO NOT clear tables/decos here. We will refetch them in the UI after save.
+            const newList = mappedFloors.length > 0 ? mappedFloors : state.listOfFloors;
+            set({ listOfFloors: newList });
+
             if (state.currentFloor) {
               const updatedCurrent = newList.find(f => f.floorNo === state.currentFloor?.floorNo);
               if (updatedCurrent) set({ currentFloor: updatedCurrent });
