@@ -3,6 +3,23 @@ import type { ProductModel, CartItemModel, HoldSaleModel } from "../models";
 import axiosClient from "../api/axiosClient";
 import { API_ENDPOINTS } from "../constants/apiEndpoints";
 import { useAuthStore } from "./useAuthStore";
+import { Audio } from "expo-av";
+
+const playAddToCartSound = async () => {
+  try {
+    const { sound } = await Audio.Sound.createAsync(
+      require('../../assets/beep.wav')
+    );
+    await sound.playAsync();
+    sound.setOnPlaybackStatusUpdate((status: any) => {
+      if (status.isLoaded && status.didJustFinish) {
+        sound.unloadAsync();
+      }
+    });
+  } catch (error) {
+    console.log('Error playing sound', error);
+  }
+};
 
 interface CartState {
   cartItems: CartItemModel[];
@@ -51,6 +68,7 @@ export const useCartStore = create<CartState>((set, get) => ({
   selectedCustomerId: 1,
 
   addItem: (product: ProductModel) => {
+    playAddToCartSound();
     const { cartItems } = get();
     const existingItem = cartItems.find((item) => item.product_id === product.product_id);
 

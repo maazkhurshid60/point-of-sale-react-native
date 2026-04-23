@@ -20,7 +20,7 @@ export default function RestaurantFloorsScreen() {
   const { width } = useWindowDimensions();
   const setScreen = useUIStore((state) => state.setScreen);
   const { fetchFloors, listOfFloors, setCurrentFloor, fetchFloorDetails } = useAuthStore();
-  
+
   const [isLoading, setIsLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -29,11 +29,12 @@ export default function RestaurantFloorsScreen() {
     const store = useAuthStore.getState();
     const newFloor = store.addFloor();
     const result = await store.saveFloorLayout();
-    
+
     if (result.success) {
       // Re-fetch everything to ensure all IDs are server-confirmed
       await fetchFloors();
       // Find the floor we just added in the refreshed list
+      //@ts-ignore
       const refreshedFloor = useAuthStore.getState().listOfFloors.find(f => f.floorNo === newFloor.floorNo);
       if (refreshedFloor) {
         await store.fetchFloorDetails(refreshedFloor.floorId);
@@ -78,8 +79,8 @@ export default function RestaurantFloorsScreen() {
     const itemWidth = (width - 60) / numColumns;
 
     return (
-      <TouchableOpacity 
-        style={[styles.floorCard, { width: itemWidth }]} 
+      <TouchableOpacity
+        style={[styles.floorCard, { width: itemWidth }]}
         onPress={() => handleSelectFloor(item)}
       >
         <View style={styles.cardHeader}>
@@ -90,10 +91,10 @@ export default function RestaurantFloorsScreen() {
             <Text style={styles.statusText}>Active</Text>
           </View>
         </View>
-        
+
         <Text style={styles.floorName} numberOfLines={1}>{item.floorName}</Text>
         <Text style={styles.floorNo}>Floor No: {item.floorNo}</Text>
-        
+
         <View style={styles.cardFooter}>
           <View style={styles.statItem}>
             <Ionicons name="cube-outline" size={14} color="#718096" />
@@ -113,7 +114,7 @@ export default function RestaurantFloorsScreen() {
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Restaurant Floors</Text>
         <TouchableOpacity style={styles.addBtn} onPress={handleAddFloor}>
-           <Ionicons name="add" size={24} color="white" />
+          <Ionicons name="add" size={24} color="white" />
         </TouchableOpacity>
       </View>
 
@@ -154,8 +155,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#F7FAFC',
   },
   header: {
-    paddingTop: 50,
-    paddingBottom: 20,
+
+    paddingVertical: 10,
     paddingHorizontal: 20,
     backgroundColor: 'white',
     flexDirection: 'row',

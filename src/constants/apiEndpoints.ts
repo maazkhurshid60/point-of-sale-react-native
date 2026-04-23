@@ -40,6 +40,7 @@ export const API_ENDPOINTS = {
     DRAFT_SALE_EDIT: "/api/draftsaleedit",
     VALIDATE_COUPON: "/api/validatecoupon",
     KITCHEN_ORDERS: "/api/get-kitchen-orders",
+    GET_ALL_ORDERS: "/api/get-all-orders",
     PRODUCTS_POS: "/api/productsPOS",
   },
   TRANSACTIONS: {

@@ -147,10 +147,17 @@ const RightSideMenu: React.FC = () => {
                 />
 
                 <MenuTab
-                  title="Orders"
-                  subtitle="Pending orders"
+                  title="Kitchen View"
+                  subtitle="Active tickets"
                   icon={<MaterialIcons name="receipt-long" size={22} color="white" />}
                   onTap={() => navigateTo('ORDER_REVIEW')}
+                />
+
+                <MenuTab
+                  title="Orders List"
+                  subtitle="Manage all orders"
+                  icon="list-check"
+                  onTap={() => navigateTo('ORDER_VIEW')}
                 />
 
                 <MenuTab
@@ -330,8 +337,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   sectionLabel: {
-    ...TYPOGRAPHY.montserrat.bold,
-    color: 'rgba(255,255,255,0.3)',
+    ...TYPOGRAPHY.montserrat.bold, color: 'rgba(255,255,255,0.3)',
     fontSize: 11,
     letterSpacing: 2,
     marginBottom: 12,

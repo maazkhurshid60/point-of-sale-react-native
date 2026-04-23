@@ -29,7 +29,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   const { width: screenWidth } = useWindowDimensions();
 
   const isOutOfStock = (product.count?.total || 0) <= 0;
-  
+
   // Dynamic scaling based on density
   const isHighDensity = numColumns >= 4;
   const imageSize = isHighDensity ? 80 : 120;

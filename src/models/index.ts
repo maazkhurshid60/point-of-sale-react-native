@@ -177,6 +177,7 @@ export interface PaymentMethod {
   account_id: number | null;
   type: 'Payment' | 'Refund';
   ref: string | null;
+  date?: string;
 }
 
 export interface SoftwareSettings {
@@ -308,4 +309,33 @@ export interface KitchenOrder {
   selected: boolean;
   status: 'pending' | 'accepted' | 'done' | '';
   tableName: string;
+}
+export interface OrderItem {
+  id: number;
+  order_id: number;
+  product_id: number;
+  name: string;
+  full_name: string;
+  selling_price: string;
+  qty: string;
+  subtotal: number;
+}
+
+export interface GeneralOrder {
+  id: number;
+  user_id: number;
+  store_id: number;
+  customer_id: number | null;
+  salesman_id: number | null;
+  product_id: string; // JSON string like "[\"222\",\"221\"]"
+  no_of_products: string;
+  total_quantity: string;
+  total_bill: string;
+  actual_bill: string;
+  order_status: string;
+  created_at: string;
+  updated_at: string;
+  order_item: OrderItem[];
+  customer: Customer | null;
+  salesman: Salesman | null;
 }

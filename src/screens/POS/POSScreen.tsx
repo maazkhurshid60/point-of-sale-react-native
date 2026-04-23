@@ -12,6 +12,8 @@ import {
 import { FontAwesome6 } from '@expo/vector-icons';
 import { useCartStore } from '../../store/useCartStore';
 import { useAuthStore } from '../../store/useAuthStore';
+import { usePaymentStore } from '../../store/usePaymentStore';
+import { useUIStore } from '../../store/useUIStore';
 import { CartItemRow } from '../../components/billing/CartItemRow';
 import { useDialogStore } from '../../store/useDialogStore';
 import { ProductsListing } from '../../components/catalog/ProductsListing';
@@ -22,6 +24,9 @@ export default function POSScreen() {
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const isLandscape = windowWidth > windowHeight;
   const isTablet = windowWidth > 900;
+
+  const setScreen = useUIStore((state) => state.setScreen);
+  const setPaymentScreenValues = usePaymentStore((state) => state.setPaymentScreenValues);
 
   const cartItems = useCartStore((state) => state.cartItems);
   const clearCart = useCartStore((state) => state.clearCart);
@@ -239,7 +244,17 @@ export default function POSScreen() {
             <Text style={styles.btnText}>Order</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#0288d1' }]}>
+          <TouchableOpacity 
+            style={[styles.actionBtn, { backgroundColor: '#0288d1' }]}
+            onPress={() => {
+              if (cartItems.length > 0) {
+                setPaymentScreenValues(totalToPay, totalToPay);
+                setScreen('PAYMENT');
+              } else {
+                // Ignore or could show an alert
+              }
+            }}
+          >
             <Text style={styles.btnText}>Payment</Text>
           </TouchableOpacity>
 

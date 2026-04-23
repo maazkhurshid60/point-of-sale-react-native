@@ -15,12 +15,14 @@ import { ShiftDetailsScreen } from '../Shift/ShiftDetailsScreen';
 import { RestaurantTableScreen } from '../Restaurant/RestaurantTableScreen';
 import RestaurantFloorsScreen from '../Restaurant/RestaurantFloorsScreen';
 import { OrderReviewScreen } from '../Orders/OrderReviewScreen';
+import { OrdersScreen } from '../Orders/OrdersScreen';
 import { POSExpenseScreen } from '../Expenses/POSExpenseScreen';
 import { HoldSalesScreen } from '../Sales/HoldSalesScreen';
 import SalesScreen from '../Sales/SalesScreen';
 import OfflineSalesScreen from '../OfflineSales/OfflineSalesScreen';
 import POSScreen from '../POS/POSScreen';
 import EditSaleScreen from '../Sales/EditSaleScreen';
+import PaymentScreen from '../Payment/PaymentScreen';
 import ReportsMenuScreen from '../Reports/ReportsMenuScreen';
 import ProductReportScreen from '../Reports/ProductReportScreen';
 import InvoicePaymentReportScreen from '../Reports/InvoicePaymentReportScreen';
@@ -56,9 +58,9 @@ export default function DashboardScreen() {
   // Shift Protection Logic
   useEffect(() => {
     const exemptedScreens = ['DEFAULT', 'PROFILE', 'POS_SETTINGS', 'REPORTS_MENU', 'SHIFT_DETAILS', 'PRODUCT_REPORT', 'INVOICE_REPORT', 'CASHIER_REPORT', 'CREDIT_REPORT', 'WAREHOUSE_REPORT', 'STORE_REPORT', 'DAILY_REPORT'];
-    
+
     console.log(`Current Screen: ${activeScreen}, Shift Opened: ${isShiftOpened}`);
-    
+
     if (!exemptedScreens.includes(activeScreen) && !isShiftOpened) {
       console.log('Access restricted - open shift required for sales modules');
       showDialog('OPEN_SHIFT', {});
@@ -80,6 +82,8 @@ export default function DashboardScreen() {
         return <RestaurantTableScreen />;
       case 'ORDER_REVIEW':
         return <OrderReviewScreen />;
+      case 'ORDER_VIEW':
+        return <OrdersScreen />;
       case 'POS_EXPENSE':
         return <POSExpenseScreen />;
       case 'HOLD_SALES':
@@ -110,6 +114,8 @@ export default function DashboardScreen() {
         return <StoreStockReportScreen />;
       case 'EDIT_SALE':
         return <EditSaleScreen />;
+      case 'PAYMENT':
+        return <PaymentScreen />;
       case 'DEFAULT':
       default:
         return <DashboardMainScreen />;

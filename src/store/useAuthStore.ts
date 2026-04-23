@@ -1054,36 +1054,10 @@ export const useAuthStore = create<AuthState>()(
               isSelected: false
             }));
 
-            // Safely merge logic for save
-            // We need to map old temp IDs to new server IDs to avoid orphaning tables
-            const newList = mappedFloors.length > 0 ? mappedFloors : state.listOfFloors;
-
-            // Create a map of floorNo -> realId for the response floors
-            const floorNoToRealId = new Map(mappedFloors.map(f => [f.floorNo, f.floorId]));
-
-            // Clean up old tables for the floors we just received updates for
-            const responseFloorIds = new Set(mappedFloors.map(f => f.floorId));
-            const otherTables = state.listOfTables.filter(t => {
-              const isOldTempId = t.floorid > 1000000000;
-              // If it's a temp ID, check if its floor name matches a floor we just updated
-              if (isOldTempId) {
-                const floor = state.listOfFloors.find(f => f.floorId === t.floorid);
-                if (floor && floorNoToRealId.has(floor.floorNo)) return false; // Remove, we'll use server's tables
-              }
-              return !responseFloorIds.has(Number(t.floorid));
-            });
-
-            const otherDecos = state.listofdecorations.filter(d => {
-              const isOldTempId = d.floor > 1000000000;
-              if (isOldTempId) {
-                const floor = state.listOfFloors.find(f => f.floorId === d.floor);
-                if (floor && floorNoToRealId.has(floor.floorNo)) return false;
-              }
-              return !responseFloorIds.has(Number(d.floor));
-            });
-
-            // SAFE SYNC: Only update the floors list. 
-            // DO NOT clear tables/decos here. We will refetch them in the UI after save.
+            // SAFE SYNC: Only update the floors list based on the server response.
+            // We explicitly do NOT merge or overwrite tables/decorations here to prevent
+            // incomplete server data from wiping the UI. Instead, the UI triggers a dedicated
+            // fetchFloorDetails call immediately after a successful save to ensure absolute consistency.
             const newList = mappedFloors.length > 0 ? mappedFloors : state.listOfFloors;
             set({ listOfFloors: newList });
 
