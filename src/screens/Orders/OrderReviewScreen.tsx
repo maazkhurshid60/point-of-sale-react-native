@@ -23,7 +23,7 @@ export const OrderReviewScreen: React.FC = () => {
   const { width } = useWindowDimensions();
   const isTablet = width > 768;
   const setScreen = useUIStore((state) => state.setScreen);
-  
+
   const [activeView, setActiveView] = useState<KitchenViewType>('All');
   const [selectedWaiter, setSelectedWaiter] = useState('All');
 
@@ -67,8 +67,8 @@ export const OrderReviewScreen: React.FC = () => {
         data={list}
         keyExtractor={(item) => item.orderId.toString()}
         renderItem={({ item }) => (
-          <KitchenOrderCard 
-            order={item} 
+          <KitchenOrderCard
+            order={item}
             onStatusChange={handleStatusChange}
             onItemStatusChange={handleItemStatusChange}
           />
@@ -101,13 +101,13 @@ export const OrderReviewScreen: React.FC = () => {
             <Text style={styles.subtitle}>{orders.length} Active Tickets</Text>
           </View>
         </View>
-        
+
         <TouchableOpacity style={styles.refreshBtn} onPress={() => refetch()} disabled={isRefetching}>
-          <FontAwesome6 
-            name="rotate" 
-            size={16} 
-            color={COLORS.primary} 
-            style={isRefetching && { transform: [{ rotate: '45deg' }] }} 
+          <FontAwesome6
+            name="rotate"
+            size={16}
+            color={COLORS.primary}
+            style={isRefetching && { transform: [{ rotate: '45deg' }] }}
           />
         </TouchableOpacity>
       </View>
@@ -117,21 +117,21 @@ export const OrderReviewScreen: React.FC = () => {
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
           <Text style={styles.filterLabel}>View:</Text>
           {(['All', 'ToDo', 'InProgress', 'Done'] as KitchenViewType[]).map((view) => (
-            <TouchableOpacity 
-              key={view} 
+            <TouchableOpacity
+              key={view}
               style={[styles.filterTab, activeView === view && styles.activeTab]}
               onPress={() => setActiveView(view)}
             >
               <Text style={[styles.filterTabText, activeView === view && styles.activeTabText]}>{view}</Text>
             </TouchableOpacity>
           ))}
-          
+
           <View style={styles.filterDivider} />
-          
+
           <Text style={styles.filterLabel}>Waiter:</Text>
           {waiters.map((w) => (
-            <TouchableOpacity 
-              key={w} 
+            <TouchableOpacity
+              key={w}
               style={[styles.filterTab, selectedWaiter === w && styles.activeTab]}
               onPress={() => setSelectedWaiter(w)}
             >
@@ -154,8 +154,8 @@ export const OrderReviewScreen: React.FC = () => {
             data={filteredOrders}
             keyExtractor={(item) => item.orderId.toString()}
             renderItem={({ item }) => (
-              <KitchenOrderCard 
-                order={item} 
+              <KitchenOrderCard
+                order={item}
                 onStatusChange={handleStatusChange}
                 onItemStatusChange={handleItemStatusChange}
               />

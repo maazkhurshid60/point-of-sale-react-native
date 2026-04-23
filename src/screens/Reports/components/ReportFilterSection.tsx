@@ -4,10 +4,9 @@ import { FontAwesome6, MaterialIcons } from '@expo/vector-icons';
 import { COLORS } from '../../../constants/colors';
 import { TYPOGRAPHY } from '../../../constants/typography';
 import { useReportStore, ReportType } from '../../../store/useReportStore';
+import { FormSelect } from '../../../components/common/FormSelect';
+import { CustomButton } from '../../../components/common/CustomButton';
 
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
-}
 
 interface ReportFilterSectionProps {
   type: ReportType;
@@ -23,13 +22,12 @@ const ReportFilterSection: React.FC<ReportFilterSectionProps> = ({ type }) => {
   };
 
   const renderDropdown = (label: string, field: any, options: string[]) => (
-    <View style={styles.filterItem}>
-      <Text style={styles.filterLabel}>{label}</Text>
-      <Pressable style={styles.dropdownBtn}>
-        <Text style={styles.dropdownValue}>{filters[field as keyof typeof filters] as string}</Text>
-        <FontAwesome6 name="chevron-down" size={12} color={COLORS.greyText} />
-      </Pressable>
-    </View>
+    <FormSelect
+      label={label}
+      value={filters[field as keyof typeof filters] as string}
+      onPress={() => { }} // Handle opening dropdown list if needed
+      style={styles.filterItem}
+    />
   );
 
   return (
@@ -39,10 +37,10 @@ const ReportFilterSection: React.FC<ReportFilterSectionProps> = ({ type }) => {
           <FontAwesome6 name="filter" size={16} color={COLORS.primary} />
           <Text style={styles.headerTitle}>Filters</Text>
         </View>
-        <FontAwesome6 
-          name={filters.isFiltersExpandedForMobile ? "chevron-up" : "chevron-down"} 
-          size={16} 
-          color={COLORS.greyText} 
+        <FontAwesome6
+          name={filters.isFiltersExpandedForMobile ? "chevron-up" : "chevron-down"}
+          size={16}
+          color={COLORS.greyText}
         />
       </Pressable>
 
@@ -56,23 +54,23 @@ const ReportFilterSection: React.FC<ReportFilterSectionProps> = ({ type }) => {
             {renderDropdown("Salesman", "selectedSalesman", store.listOfSalesmen)}
             {renderDropdown("Status", "selectedSalePaymentStatus", store.listOfPaymentStatuses)}
           </View>
-          
+
           <View style={styles.actions}>
-            <Pressable 
-                style={[styles.actionBtn, styles.resetBtn]} 
-                onPress={() => store.resetFilters(type)}
-            >
-              <Text style={styles.resetBtnText}>Reset</Text>
-            </Pressable>
-            <Pressable 
-                style={[styles.actionBtn, styles.applyBtn]} 
-                onPress={() => {
-                    store.fetchReportData(type);
-                    toggleExpand();
-                }}
-            >
-              <Text style={styles.applyBtnText}>Apply Filters</Text>
-            </Pressable>
+            <CustomButton
+              title="Reset"
+              onPress={() => store.resetFilters(type)}
+              variant="secondary"
+              style={{ flex: 1 }}
+            />
+            <CustomButton
+              title="Apply Filters"
+              onPress={() => {
+                store.fetchReportData(type);
+                toggleExpand();
+              }}
+              variant="primary"
+              style={{ flex: 1 }}
+            />
           </View>
         </View>
       )}
@@ -159,31 +157,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 12,
     marginTop: 8,
-  },
-  actionBtn: {
-    flex: 1,
-    height: 48,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  resetBtn: {
-    backgroundColor: '#f8f9fa',
-    borderWidth: 1,
-    borderColor: '#e9ecef',
-  },
-  resetBtnText: {
-    ...TYPOGRAPHY.montserrat.bold,
-    fontSize: 14,
-    color: '#495057',
-  },
-  applyBtn: {
-    backgroundColor: COLORS.primary,
-  },
-  applyBtnText: {
-    ...TYPOGRAPHY.montserrat.bold,
-    fontSize: 14,
-    color: '#fff',
   },
 });
 

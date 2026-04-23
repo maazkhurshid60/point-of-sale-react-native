@@ -11,6 +11,7 @@ import {
   Image,
   Alert,
   ActivityIndicator,
+  Modal
 } from 'react-native';
 import { FontAwesome6, MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import Animated, {
@@ -27,6 +28,8 @@ import { useUIStore } from '../../store/useUIStore';
 import { COLORS } from '../../constants/colors';
 import { TYPOGRAPHY } from '../../constants/typography';
 import { TableModel, DecorationModel } from '../../models';
+import { CustomButton } from '../../components/common/CustomButton';
+import { ActionModal } from '../../components/common/ActionModal';
 
 const TABLE_MIN_SIZE = 50;
 const FLOOR_BG = require('../../../assets/images/floor.png');
@@ -235,6 +238,18 @@ export const RestaurantTableScreen: React.FC = () => {
   const setScreen = useUIStore((state) => state.setScreen);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoadingFloor, setIsLoadingFloor] = useState<number | null>(null);
+  const [modalConfig, setModalConfig] = useState<{ 
+    visible: boolean; 
+    type: 'success' | 'error' | 'confirm'; 
+    title: string; 
+    message: string;
+    onConfirm?: () => void;
+  }>({
+    visible: false,
+    type: 'success',
+    title: '',
+    message: ''
+  });
 
   const selectedTable = store.listOfTables.find(t => t.isSelected);
   const selectedDecoration = store.listofdecorations.find(d => d.isSelected);
@@ -266,17 +281,38 @@ export const RestaurantTableScreen: React.FC = () => {
   const handleSave = async () => {
     setIsSaving(true);
     const result = await store.saveFloorLayout();
+    setIsSaving(false);
     if (result.success) {
       if (store.currentFloor) {
-        // FORCE a fresh fetch after save to sync all IDs and items accurately
         await store.fetchFloorDetails(store.currentFloor.floorId);
       }
-      setIsSaving(false);
-      Alert.alert("Success", "Restaurant layout saved successfully!");
+      setModalConfig({
+        visible: true,
+        type: 'success',
+        title: "Great Success!",
+        message: "Restaurant layout saved successfully!"
+      });
     } else {
-      setIsSaving(false);
-      Alert.alert("Error", result.message || "Failed to save restaurant layout. Please try again.");
+      setModalConfig({
+        visible: true,
+        type: 'error',
+        title: "Oops! Something went wrong",
+        message: result.message || "Failed to save restaurant layout. Please try again."
+      });
     }
+  };
+
+  const confirmRemoveFloor = () => {
+    setModalConfig({
+      visible: true,
+      type: 'confirm',
+      title: "Delete Floor",
+      message: `Are you sure you want to delete "${store.currentFloor?.floorName}" and all its tables? This action cannot be undone until you save.`,
+      onConfirm: () => {
+        store.removeFloor();
+        setModalConfig(prev => ({ ...prev, visible: false }));
+      }
+    });
   };
 
   return (
@@ -290,17 +326,13 @@ export const RestaurantTableScreen: React.FC = () => {
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{store.currentFloor?.floorName || 'Floor Editor'}</Text>
         <View style={styles.headerActions}>
-          <TouchableOpacity
-            style={[styles.topSaveBtn, isSaving && { opacity: 0.7 }]}
-            onPress={handleSave}
-            disabled={isSaving}
-          >
-            {isSaving ? (
-              <ActivityIndicator size="small" color="white" />
-            ) : (
-              <Text style={styles.topSaveBtnText}>Save</Text>
-            )}
-          </TouchableOpacity>
+          <CustomButton 
+            title="Save" 
+            onPress={handleSave} 
+            isLoading={isSaving} 
+            size="small"
+            style={{ width: 80 }}
+          />
         </View>
       </View>
 
@@ -339,14 +371,22 @@ export const RestaurantTableScreen: React.FC = () => {
                 </View>
               </View>
               <View style={styles.flexRow}>
-                <TouchableOpacity style={styles.properActionBtn} onPress={() => store.currentFloor && store.addTable(store.currentFloor.floorId)}>
-                  <Ionicons name="add" size={16} color="white" />
-                  <Text style={styles.actionBtnText}>Add Table</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.properActionBtn, { backgroundColor: '#E53E3E' }]} onPress={store.removeFloor}>
-                  <Ionicons name="trash-outline" size={14} color="white" />
-                  <Text style={styles.actionBtnText}>Delete</Text>
-                </TouchableOpacity>
+                <CustomButton 
+                  title="Add Table" 
+                  icon="add" 
+                  onPress={() => store.currentFloor && store.addTable(store.currentFloor.floorId)}
+                  variant="primary"
+                  size="small"
+                  style={{ flex: 1 }}
+                />
+                <CustomButton 
+                  title="Delete" 
+                  icon="trash-outline" 
+                  onPress={confirmRemoveFloor}
+                  variant="danger"
+                  size="small"
+                  style={{ flex: 1 }}
+                />
               </View>
             </ControlCard>
 
@@ -415,24 +455,24 @@ export const RestaurantTableScreen: React.FC = () => {
                   </View>
                 </View>
 
-                <TouchableOpacity
-                  style={styles.properDeleteBtn}
+                <CustomButton
+                  title="Remove Table"
+                  icon="trash"
                   onPress={() => store.removeTable(selectedTable.tableId)}
-                >
-                  <Ionicons name="trash" size={18} color="white" />
-                  <Text style={styles.actionBtnText}>Remove Table</Text>
-                </TouchableOpacity>
+                  variant="danger"
+                  style={{ marginTop: 10 }}
+                />
               </ControlCard>
             ) : selectedDecoration ? (
               <ControlCard title="Plant Controls" icon="leaf-outline">
                 <Text style={styles.subText}>Currently adjusting: {selectedDecoration.title}</Text>
-                <TouchableOpacity
-                  style={styles.properDeleteBtn}
+                <CustomButton
+                  title="Remove Plant"
+                  icon="close-circle"
                   onPress={() => store.removeDecoration(selectedDecoration.id)}
-                >
-                  <Ionicons name="close-circle" size={18} color="white" />
-                  <Text style={styles.actionBtnText}>Remove Plant</Text>
-                </TouchableOpacity>
+                  variant="danger"
+                  style={{ marginTop: 10 }}
+                />
               </ControlCard>
             ) : (
               <View style={styles.properEmpty}>
@@ -467,7 +507,7 @@ export const RestaurantTableScreen: React.FC = () => {
         </View>
 
         <View style={styles.properCanvas}>
-          <ImageBackground source={FLOOR_BG} style={styles.properFloor} imageStyle={{ opacity: 0.1 }}>
+          <ImageBackground source={FLOOR_BG} style={styles.properFloor} imageStyle={{ opacity: 0.35 }}>
             {tablesInCurrentFloor.map((table) => (
               <DraggableTable
                 key={table.tableId}
@@ -488,6 +528,16 @@ export const RestaurantTableScreen: React.FC = () => {
           </ImageBackground>
         </View>
       </View>
+
+      <ActionModal
+        visible={modalConfig.visible}
+        type={modalConfig.type}
+        title={modalConfig.title}
+        message={modalConfig.message}
+        onClose={() => setModalConfig({ ...modalConfig, visible: false })}
+        onConfirm={modalConfig.onConfirm}
+      />
+
     </View>
   );
 };
@@ -547,8 +597,72 @@ const styles = StyleSheet.create({
   floorHeaderSolid: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'white', paddingHorizontal: 20, paddingVertical: 12, borderRadius: 12, marginBottom: 15, alignSelf: 'flex-start', borderWidth: 1, borderColor: '#E2E8F0', gap: 10 },
   floorStatusDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#48BB78' },
   floorNameTitle: { ...TYPOGRAPHY.montserrat.bold, fontSize: 14, color: '#2D3748' },
-  properFloor: { flex: 1, backgroundColor: 'white', borderRadius: 20, borderWidth: 1, borderColor: '#E2E8F0', overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 3 },
-  tableContainer: { position: 'absolute', backgroundColor: '#C1873F', justifyContent: 'center', alignItems: 'center', elevation: 5, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2 },
+  properFloor: { flex: 1, backgroundColor: 'white', borderRadius: 20, borderWidth: 1, borderColor: '#1d7af3ff', overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 4 } },
+  tableContainer: { position: 'absolute', backgroundColor: '#C1873F', justifyContent: 'center', alignItems: 'center', elevation: 5, shadowColor: '#000', shadowOffset: { width: 0, height: 4 } },
   tableText: { ...TYPOGRAPHY.montserrat.bold, fontSize: 11, color: 'rgba(0,0,0,0.8)', textAlign: 'center' },
   resizeHandle: { position: 'absolute', right: -10, bottom: -10, width: 24, height: 24, backgroundColor: '#6750A4', borderRadius: 12, justifyContent: 'center', alignItems: 'center', zIndex: 100 },
+
+  // New Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  statusModalContent: {
+    width: 320,
+    backgroundColor: 'white',
+    borderRadius: 30,
+    padding: 30,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 15,
+    elevation: 10,
+  },
+  iconCircLarge: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    ...TYPOGRAPHY.montserrat.bold,
+    fontSize: 20,
+    color: '#2D3748',
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  modalMessage: {
+    ...TYPOGRAPHY.montserrat.medium,
+    fontSize: 14,
+    color: '#718096',
+    textAlign: 'center',
+    marginBottom: 25,
+  },
+  modalCloseBtn: {
+    width: '100%',
+    paddingVertical: 15,
+    borderRadius: 15,
+    alignItems: 'center',
+  },
+  modalCloseBtnText: {
+    color: 'white',
+    ...TYPOGRAPHY.montserrat.bold,
+    fontSize: 14,
+  },
+  modalActionRow: {
+    flexDirection: 'row',
+    gap: 12,
+    width: '100%',
+  },
+  modalBtnHalf: {
+    flex: 1,
+    paddingVertical: 15,
+    borderRadius: 15,
+    alignItems: 'center',
+  },
 });

@@ -685,11 +685,20 @@ export const useAuthStore = create<AuthState>()(
         return newFloor;
       },
       removeFloor: () => {
-        const { listOfFloors } = get();
-        if (listOfFloors.length <= 1) return;
-        const newList = [...listOfFloors];
-        newList.pop();
-        set({ listOfFloors: newList, currentFloor: newList[newList.length - 1] });
+        const { listOfFloors, currentFloor, listOfTables, listofdecorations } = get();
+        if (!currentFloor || listOfFloors.length <= 1) return;
+
+        const targetId = currentFloor.floorId;
+        const newList = listOfFloors.filter(f => f.floorId !== targetId);
+
+        set({
+          listOfFloors: newList,
+          // Switch to the first available floor
+          currentFloor: newList[0],
+          // Cleanup all items associated with the deleted floor
+          listOfTables: listOfTables.filter(t => t.floorid !== targetId),
+          listofdecorations: listofdecorations.filter(d => d.floor !== targetId)
+        });
       },
       addTable: (floorId) => {
         const state = get();

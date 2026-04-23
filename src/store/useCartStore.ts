@@ -3,19 +3,14 @@ import type { ProductModel, CartItemModel, HoldSaleModel } from "../models";
 import axiosClient from "../api/axiosClient";
 import { API_ENDPOINTS } from "../constants/apiEndpoints";
 import { useAuthStore } from "./useAuthStore";
-import { Audio } from "expo-av";
+import { createAudioPlayer } from "expo-audio";
 
-const playAddToCartSound = async () => {
+const cartAddItemPlayer = createAudioPlayer(require('../../assets/beep.wav'));
+
+const playAddToCartSound = () => {
   try {
-    const { sound } = await Audio.Sound.createAsync(
-      require('../../assets/beep.wav')
-    );
-    await sound.playAsync();
-    sound.setOnPlaybackStatusUpdate((status: any) => {
-      if (status.isLoaded && status.didJustFinish) {
-        sound.unloadAsync();
-      }
-    });
+    cartAddItemPlayer.seekTo(0);
+    cartAddItemPlayer.play();
   } catch (error) {
     console.log('Error playing sound', error);
   }
@@ -178,7 +173,7 @@ export const useCartStore = create<CartState>((set, get) => ({
       enable_comments: 0,        // Backend foreach line 190
       note: '',
       notes: '',
-      serial_number: '',  
+      serial_number: '',
       expiry_date: null,
       warehouse_id: null,
       tax: 0,
