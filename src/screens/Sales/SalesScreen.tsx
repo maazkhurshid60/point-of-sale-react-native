@@ -17,6 +17,7 @@ import { useUIStore } from '../../store/useUIStore';
 import { useDialogStore, DialogType } from '../../store/useDialogStore';
 import { COLORS } from '../../constants/colors';
 import { TYPOGRAPHY } from '../../constants/typography';
+import { CustomButton } from '../../components/common/CustomButton';
 
 const SalesScreen: React.FC = () => {
   const { width, height } = useWindowDimensions();
@@ -103,8 +104,8 @@ const SalesScreen: React.FC = () => {
   };
 
   const StatusBadge = ({ status, color }: { status: string; color: string }) => (
-    <View style={[styles.badge, { backgroundColor: color + '15', borderColor: color + '30' }]}>
-      <Text style={[styles.badgeText, { color }]}>{status}</Text>
+    <View style={StyleSheet.flatten([styles.badge, { backgroundColor: color + '15', borderColor: color + '30' }])}>
+      <Text style={StyleSheet.flatten([styles.badgeText, { color }])}>{status}</Text>
     </View>
   );
 
@@ -112,33 +113,42 @@ const SalesScreen: React.FC = () => {
 
   const renderHeader = () => (
     <View style={styles.header}>
-      <View style={[styles.headerInner, { maxWidth: contentMaxWidth, alignSelf: 'center' }]}>
+      <View style={StyleSheet.flatten([styles.headerInner, { maxWidth: contentMaxWidth, alignSelf: 'center' }])}>
         <View>
           <Text style={styles.breadcrumb}>Dashboard / <Text style={{ color: COLORS.primary }}>Sales History</Text></Text>
           <Text style={styles.title}>Sales Records</Text>
         </View>
         <View style={styles.headerActions}>
           {isTablet && (
-            <Pressable style={styles.resetAllBtn} onPress={() => { resetFilters(); fetchSales(1); }}>
-              <FontAwesome6 name="filter-circle-xmark" size={14} color={COLORS.posRed} />
-              <Text style={styles.resetAllText}>Reset Filters</Text>
-            </Pressable>
+            <CustomButton
+              title="Reset Filters"
+              onPress={() => { resetFilters(); fetchSales(1); }}
+              variant="none"
+              size="none"
+              style={styles.resetAllBtn}
+              textStyle={styles.resetAllText}
+              iconComponent={<FontAwesome6 name="filter-circle-xmark" size={14} color={COLORS.posRed} />}
+            />
           )}
-          <Pressable style={styles.refreshButton} onPress={onRefresh}>
-            <FontAwesome6 name="rotate" size={16} color={COLORS.primary} />
-          </Pressable>
+          <CustomButton
+            onPress={onRefresh}
+            variant="none"
+            size="none"
+            style={styles.refreshButton}
+            iconComponent={<FontAwesome6 name="rotate" size={16} color={COLORS.primary} />}
+          />
         </View>
       </View>
     </View>
   );
 
   const renderFilters = () => (
-    <View style={[
+    <View style={StyleSheet.flatten([
       styles.filterSection,
       { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' },
       (!isTablet && !isLandscape) && styles.filterSectionMobile,
       isLandscape && !isTablet && { flexWrap: 'nowrap' }
-    ]}>
+    ])}>
       {/* Sale Type Picker */}
       <View style={[styles.filterItem, !isTablet && !isLandscape && { width: '48.5%' }]}>
         <View style={styles.pickerWrapper}>
@@ -215,15 +225,16 @@ const SalesScreen: React.FC = () => {
 
     return (
       <View style={styles.paginationContainer}>
-        <View style={[styles.paginationInner, { maxWidth: contentMaxWidth, alignSelf: 'center' }]}>
-          <Pressable
-            style={[styles.pageButton, !pagination.hasPrevPage && styles.pageButtonDisabled]}
+        <View style={StyleSheet.flatten([styles.paginationInner, { maxWidth: contentMaxWidth, alignSelf: 'center' }])}>
+          <CustomButton
+            title="Previous"
             onPress={() => pagination.hasPrevPage && fetchSales(pagination.currentPage - 1)}
             disabled={!pagination.hasPrevPage || isLoading}
-          >
-            <FontAwesome6 name="chevron-left" size={12} color={!pagination.hasPrevPage ? COLORS.greyText : COLORS.primary} />
-            <Text style={[styles.pageButtonText, !pagination.hasPrevPage && { color: COLORS.greyText }]}>Previous</Text>
-          </Pressable>
+            variant="outline"
+            style={StyleSheet.flatten([styles.pageButton, !pagination.hasPrevPage && styles.pageButtonDisabled])}
+            textStyle={StyleSheet.flatten([styles.pageButtonText, !pagination.hasPrevPage && { color: COLORS.greyText }])}
+            iconComponent={<FontAwesome6 name="chevron-left" size={12} color={!pagination.hasPrevPage ? COLORS.greyText : COLORS.primary} />}
+          />
 
           <View style={styles.pageIndicator}>
             <Text style={styles.pageInfoText}>
@@ -232,14 +243,15 @@ const SalesScreen: React.FC = () => {
             {pagination.total > 0 && <Text style={styles.totalRecordsText}>{pagination.total} Records Found</Text>}
           </View>
 
-          <Pressable
-            style={[styles.pageButton, !pagination.hasNextPage && styles.pageButtonDisabled]}
+          <CustomButton
+            title="Next"
             onPress={() => pagination.hasNextPage && fetchSales(pagination.currentPage + 1)}
             disabled={!pagination.hasNextPage || isLoading}
-          >
-            <Text style={[styles.pageButtonText, !pagination.hasNextPage && { color: COLORS.greyText }]}>Next</Text>
-            <FontAwesome6 name="chevron-right" size={12} color={!pagination.hasNextPage ? COLORS.greyText : COLORS.primary} />
-          </Pressable>
+            variant="outline"
+            style={StyleSheet.flatten([styles.pageButton, !pagination.hasNextPage && styles.pageButtonDisabled])}
+            textStyle={StyleSheet.flatten([styles.pageButtonText, !pagination.hasNextPage && { color: COLORS.greyText }])}
+            iconComponent={<FontAwesome6 name="chevron-right" size={12} color={!pagination.hasNextPage ? COLORS.greyText : COLORS.primary} />}
+          />
         </View>
       </View>
     );
@@ -261,8 +273,8 @@ const SalesScreen: React.FC = () => {
 
   const renderTableRow = (item: any, idx: number) => (
     <View key={item.sale_id || idx} style={styles.tableRow}>
-      <Text style={[styles.cellText, { flex: 0.8, color: COLORS.greyText }]}>{item.sale_id}</Text>
-      <Text style={[styles.cellText, styles.invoiceText, { flex: 2.2 }]} selectable>{item.invoice_no}</Text>
+      <Text style={StyleSheet.flatten([styles.cellText, { flex: 0.8, color: COLORS.greyText }])}>{item.sale_id}</Text>
+      <Text style={StyleSheet.flatten([styles.cellText, styles.invoiceText, { flex: 2.2 }])} selectable>{item.invoice_no}</Text>
       <View style={{ flex: 1.2 }}>
         <Text style={styles.cellText}>
           {item.created_at ? new Date(item.created_at).toLocaleDateString() : '-'}
@@ -270,7 +282,7 @@ const SalesScreen: React.FC = () => {
       </View>
       <Text style={[styles.cellText, { flex: 2.0 }]} numberOfLines={1}>{item.customer?.name || 'Walk-in Customer'}</Text>
 
-      <View style={[styles.cell, { flex: 2.5, flexDirection: 'row', gap: 4, flexWrap: 'wrap' }]}>
+      <View style={StyleSheet.flatten([styles.cell, { flex: 2.5, flexDirection: 'row', gap: 4, flexWrap: 'wrap' }])}>
         {item.status === 'Fulfilled' && <StatusBadge status="Fulfilled" color={COLORS.posGreen} />}
         {item.status === 'Unfulfilled' && <StatusBadge status="Unfulfilled" color={COLORS.posRed} />}
         {item.payment_status === 'Paid' && <StatusBadge status="Paid" color={COLORS.posGreen} />}
@@ -280,11 +292,11 @@ const SalesScreen: React.FC = () => {
         {item.payment_status === 'Invoiced' && <StatusBadge status="Invoiced" color={COLORS.primary} />}
       </View>
 
-      <Text style={[styles.cellText, styles.totalText, { flex: 1.2, textAlign: 'right' }]}>{item.total_bill}</Text>
-      <Text style={[styles.cellText, styles.totalText, { flex: 1.2, textAlign: 'right', color: COLORS.posGreen }]}>{item.amount_paid}</Text>
-      <Text style={[styles.cellText, styles.totalText, { flex: 1.2, textAlign: 'right', color: Number(item.balance) > 0 ? COLORS.posRed : COLORS.textDark }]}>{item.balance}</Text>
+      <Text style={StyleSheet.flatten([styles.cellText, styles.totalText, { flex: 1.2, textAlign: 'right' }])}>{item.total_bill}</Text>
+      <Text style={StyleSheet.flatten([styles.cellText, styles.totalText, { flex: 1.2, textAlign: 'right', color: COLORS.posGreen }])}>{item.amount_paid}</Text>
+      <Text style={StyleSheet.flatten([styles.cellText, styles.totalText, { flex: 1.2, textAlign: 'right', color: Number(item.balance) > 0 ? COLORS.posRed : COLORS.textDark }])}>{item.balance}</Text>
 
-      <View style={[styles.cell, { flex: 2.5, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 8 }]}>
+      <View style={StyleSheet.flatten([styles.cell, { flex: 2.5, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 8 }])}>
         <View style={styles.actionPickerContainer}>
           <Picker
             selectedValue={"Select"}
@@ -319,11 +331,11 @@ const SalesScreen: React.FC = () => {
       <View style={styles.mainContent}>
         {renderFilters()}
 
-        <View style={[
+        <View style={StyleSheet.flatten([
           styles.tableBlock,
           { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' },
           isLandscape && { flex: 1 }
-        ]}>
+        ])}>
           <ScrollView horizontal={true} showsHorizontalScrollIndicator={true} style={{ flex: 1 }}>
             <View style={{ minWidth: (isTablet || isLandscape) ? Math.max(width - 40, 1050) : 950, flex: 1 }}>
               {renderTableHeader()}

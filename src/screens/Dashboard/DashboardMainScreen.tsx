@@ -56,23 +56,23 @@ const StatCard = ({ title, amount, icon, gradientColors, delay, width }: StatCar
 
   return (
     <Animated.View
-      style={[
+      style={StyleSheet.flatten([
         styles.statCard,
         {
           width: width as any,
-          opacity: scaleAnim,
+          opacity: scaleAnim as any,
           transform: [
-            { scale: scaleAnim },
-            { rotate: spin },
+            { scale: scaleAnim as any },
+            { rotate: spin as any },
             {
               translateY: rotateAnim.interpolate({
                 inputRange: [0, 1],
                 outputRange: [0, 20],
-              })
+              }) as any
             }
           ]
         }
-      ]}
+      ])}
     >
       <LinearGradient
         colors={gradientColors as [string, string, ...string[]]}
@@ -124,33 +124,33 @@ const NavCard = ({ title, subtitle, icon, onPress, gradientColors, delay, width 
 
   return (
     <Animated.View
-      style={[
+      style={StyleSheet.flatten([
         {
           width: width as any,
-          opacity: popAnim,
+          opacity: popAnim as any,
           transform: [
             {
               scale: popAnim.interpolate({
                 inputRange: [0, 1],
                 outputRange: [0.8, 1],
-              })
+              }) as any
             },
             {
               translateX: slideAnim.interpolate({
                 inputRange: [0, 1],
                 outputRange: [0, 50],
-              })
+              }) as any
             }
           ]
         }
-      ]}
+      ])}
     >
       <Pressable
         onPress={onPress}
-        style={({ pressed }) => [
+        style={({ pressed }) => StyleSheet.flatten([
           styles.navCard,
           { transform: [{ scale: pressed ? 0.96 : 1 }] }
-        ]}
+        ])}
       >
         <View style={styles.navContent}>
           <Animated.View style={{
@@ -169,18 +169,18 @@ const NavCard = ({ title, subtitle, icon, onPress, gradientColors, delay, width 
             </LinearGradient>
           </Animated.View>
 
-          <Animated.View style={[
+          <Animated.View style={StyleSheet.flatten([
             styles.navTextContainer,
             {
-              opacity: popAnim,
+              opacity: popAnim as any,
               transform: [{
                 translateX: slideAnim.interpolate({
                   inputRange: [0, 1],
                   outputRange: [20, 0]
-                })
+                }) as any
               }]
             }
-          ]}>
+          ])}>
             <Text style={styles.navCardTitle}>{title}</Text>
             <Text style={styles.navCardSubtitle} numberOfLines={2}>{subtitle}</Text>
           </Animated.View>
@@ -237,10 +237,10 @@ export default function DashboardMainScreen() {
     <View style={styles.container}>
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={[
+        contentContainerStyle={StyleSheet.flatten([
           styles.contentContainer,
           isTabletOrLaptop && { alignSelf: 'center', width: '100%', maxWidth: 1400 }
-        ]}
+        ])}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -263,7 +263,7 @@ export default function DashboardMainScreen() {
           <View style={styles.heroSection}>
             <View>
               <Text style={styles.welcomeText}>Welcome back,</Text>
-              <Text style={[styles.userNameText, isTabletOrLaptop && { fontSize: 32 }]}>
+              <Text style={StyleSheet.flatten([styles.userNameText, isTabletOrLaptop && { fontSize: 32 }])}>
                 {currentUser?.name || 'Administrator'}
               </Text>
               <View style={styles.storeBadge}>
@@ -290,7 +290,7 @@ export default function DashboardMainScreen() {
                   <FontAwesome6 name="calendar-days" size={14} color={COLORS.primary} />
                   <Text style={styles.dateText}>April 14, 2026</Text>
                 </View>
-                <View style={[styles.filterBadge, { backgroundColor: COLORS.primary }]}>
+                <View style={StyleSheet.flatten([styles.filterBadge, { backgroundColor: COLORS.primary }])}>
                   <FontAwesome6 name="sliders" size={12} color="white" />
                 </View>
               </View>
@@ -304,7 +304,7 @@ export default function DashboardMainScreen() {
                   <FontAwesome6 name="calendar-days" size={14} color={COLORS.primary} />
                   <Text style={styles.dateText}>April 14, 2026</Text>
                 </View>
-                <View style={[styles.filterBadge, { backgroundColor: COLORS.primary }]}>
+                <View style={StyleSheet.flatten([styles.filterBadge, { backgroundColor: COLORS.primary }])}>
                   <FontAwesome6 name="sliders" size={12} color="white" />
                 </View>
               </View>
@@ -357,7 +357,7 @@ export default function DashboardMainScreen() {
             <Text style={styles.sectionTitle}>Main Terminals</Text>
           </View>
 
-          <View style={[styles.navContainer, isTabletOrLaptop && { flexDirection: 'row', flexWrap: 'wrap' }]}>
+          <View style={StyleSheet.flatten([styles.navContainer, isTabletOrLaptop && { flexDirection: 'row', flexWrap: 'wrap' }])}>
             <NavCard
               title="Point of Sale"
               subtitle="Process transactions quickly with our cloud-powered POS system"

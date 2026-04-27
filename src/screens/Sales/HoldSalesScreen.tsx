@@ -14,6 +14,7 @@ import { useCartStore } from '../../store/useCartStore';
 import { useUIStore } from '../../store/useUIStore';
 import { COLORS } from '../../constants/colors';
 import { TYPOGRAPHY } from '../../constants/typography';
+import { CustomButton } from '../../components/common/CustomButton';
 import { HoldSaleModel } from '../../models';
 
 export const HoldSalesScreen: React.FC = () => {
@@ -83,17 +84,26 @@ export const HoldSalesScreen: React.FC = () => {
           <Text style={[styles.cell, { flex: 1 }]}>Customer #{item.customer_id}</Text>
           <Text style={[styles.cell, { flex: 0.8 }]}>{item.total_bill.toFixed(2)}</Text>
           <Text style={[styles.cell, { flex: 0.8 }]}>{item.actual_bill.toFixed(2)}</Text>
-          <Text style={[styles.cell, { flex: 0.8, color: item.balance > 0 ? COLORS.posRed : COLORS.posGreen }]}>
+          <Text style={StyleSheet.flatten([styles.cell, { flex: 0.8, color: item.balance > 0 ? COLORS.posRed : COLORS.posGreen }])}>
             {item.balance.toFixed(2)}
           </Text>
-          <View style={[styles.actionsCell]}>
-            <TouchableOpacity style={styles.recallBtn} onPress={() => handleRecall(item)}>
-              <FontAwesome6 name="rotate-left" size={14} color="white" />
-              <Text style={styles.btnText}>Recall</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDelete(item.sale_id)}>
-              <FontAwesome6 name="trash" size={14} color="white" />
-            </TouchableOpacity>
+          <View style={styles.actionsCell}>
+            <CustomButton
+              title="Recall"
+              onPress={() => handleRecall(item)}
+              variant="none"
+              size="none"
+              style={styles.recallBtn}
+              textStyle={styles.btnText}
+              iconComponent={<FontAwesome6 name="rotate-left" size={14} color="white" />}
+            />
+            <CustomButton
+              onPress={() => handleDelete(item.sale_id)}
+              variant="none"
+              size="none"
+              style={styles.deleteBtn}
+              iconComponent={<FontAwesome6 name="trash" size={14} color="white" />}
+            />
           </View>
         </View>
       );
@@ -112,20 +122,30 @@ export const HoldSalesScreen: React.FC = () => {
           </View>
           <View style={styles.cardRow}>
             <Text style={styles.cardLabel}>Balance:</Text>
-            <Text style={[styles.cardValue, { color: item.balance > 0 ? COLORS.posRed : COLORS.posGreen }]}>
+            <Text style={StyleSheet.flatten([styles.cardValue, { color: item.balance > 0 ? COLORS.posRed : COLORS.posGreen }])}>
               {item.balance.toFixed(2)}
             </Text>
           </View>
         </View>
         <View style={styles.cardActions}>
-          <TouchableOpacity style={[styles.actionBtn, styles.recallBtn]} onPress={() => handleRecall(item)}>
-            <FontAwesome6 name="rotate-left" size={14} color="white" />
-            <Text style={styles.btnText}>Recall POS</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.actionBtn, styles.deleteBtn]} onPress={() => handleDelete(item.sale_id)}>
-            <FontAwesome6 name="trash" size={14} color="white" />
-            <Text style={styles.btnText}>Delete</Text>
-          </TouchableOpacity>
+          <CustomButton
+            title="Recall POS"
+            onPress={() => handleRecall(item)}
+            variant="none"
+            size="none"
+            style={StyleSheet.flatten([styles.actionBtn, styles.recallBtn])}
+            textStyle={styles.btnText}
+            iconComponent={<FontAwesome6 name="rotate-left" size={14} color="white" />}
+          />
+          <CustomButton
+            title="Delete"
+            onPress={() => handleDelete(item.sale_id)}
+            variant="none"
+            size="none"
+            style={StyleSheet.flatten([styles.actionBtn, styles.deleteBtn])}
+            textStyle={styles.btnText}
+            iconComponent={<FontAwesome6 name="trash" size={14} color="white" />}
+          />
         </View>
       </View>
     );
@@ -134,10 +154,15 @@ export const HoldSalesScreen: React.FC = () => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => setScreen('DEFAULT')}>
-          <FontAwesome6 name="arrow-left" size={20} color={COLORS.primary} />
-          <Text style={styles.backText}>Back to POS</Text>
-        </TouchableOpacity>
+        <CustomButton
+          onPress={() => setScreen('DEFAULT')}
+          variant="none"
+          size="none"
+          style={styles.backBtn}
+          textStyle={styles.backText}
+          iconComponent={<FontAwesome6 name="arrow-left" size={20} color={COLORS.primary} />}
+          title="Back to POS"
+        />
         <View>
           <Text style={styles.headerTitle}>Recall Held Sales</Text>
           <Text style={styles.headerSubtitle}>Manage your saved drafts</Text>

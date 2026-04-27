@@ -4,26 +4,27 @@ import {
   Text,
   StyleSheet,
   ActivityIndicator,
-  ViewStyle,
-  TextStyle,
   View,
 } from 'react-native';
+import type { ViewStyle, TextStyle, StyleProp } from 'react-native';
 import { COLORS } from '../../constants/colors';
 import { TYPOGRAPHY } from '../../constants/typography';
 import { Ionicons } from '@expo/vector-icons';
 
 interface CustomButtonProps {
-  title: string;
+  title?: string;
   onPress: () => void;
-  variant?: 'primary' | 'secondary' | 'danger' | 'outline' | 'ghost';
-  size?: 'small' | 'medium' | 'large';
+  variant?: 'primary' | 'secondary' | 'danger' | 'outline' | 'ghost' | 'none';
+  size?: 'small' | 'medium' | 'large' | 'none';
   isLoading?: boolean;
   disabled?: boolean;
   icon?: string;
-  style?: ViewStyle;
-  textStyle?: TextStyle;
+  iconComponent?: React.ReactNode;
+  style?: StyleProp<ViewStyle>;
+  textStyle?: StyleProp<TextStyle>;
   iconSize?: number;
   iconColor?: string;
+  activeOpacity?: number;
 }
 
 export const CustomButton: React.FC<CustomButtonProps> = ({
@@ -34,10 +35,12 @@ export const CustomButton: React.FC<CustomButtonProps> = ({
   isLoading = false,
   disabled = false,
   icon,
+  iconComponent,
   style,
   textStyle,
   iconSize = 18,
   iconColor,
+  activeOpacity = 0.7,
 }) => {
   const getVariantStyle = () => {
     switch (variant) {
@@ -49,6 +52,8 @@ export const CustomButton: React.FC<CustomButtonProps> = ({
         return { backgroundColor: 'transparent', borderWidth: 1, borderColor: COLORS.primary };
       case 'ghost':
         return { backgroundColor: 'transparent', borderWidth: 0 };
+      case 'none':
+        return {};
       default:
         return { backgroundColor: COLORS.primary, borderWidth: 0 };
     }
@@ -74,6 +79,8 @@ export const CustomButton: React.FC<CustomButtonProps> = ({
         return { paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8 };
       case 'large':
         return { paddingVertical: 16, paddingHorizontal: 24, borderRadius: 15 };
+      case 'none':
+        return {};
       default:
         return { paddingVertical: 12, paddingHorizontal: 16, borderRadius: 12 };
     }
@@ -85,6 +92,8 @@ export const CustomButton: React.FC<CustomButtonProps> = ({
         return 12;
       case 'large':
         return 16;
+      case 'none':
+        return undefined;
       default:
         return 14;
     }
@@ -92,38 +101,42 @@ export const CustomButton: React.FC<CustomButtonProps> = ({
 
   return (
     <TouchableOpacity
-      activeOpacity={0.7}
+      activeOpacity={activeOpacity}
       onPress={onPress}
       disabled={disabled || isLoading}
-      style={[
+      style={StyleSheet.flatten([
         styles.base,
         getVariantStyle(),
         getSizeStyle(),
         (disabled || isLoading) && styles.disabled,
         style,
-      ]}
+      ])}
     >
       {isLoading ? (
         <ActivityIndicator size="small" color={getTextColor()} />
       ) : (
         <View style={styles.content}>
-          {icon && (
+          {iconComponent ? (
+            iconComponent
+          ) : icon ? (
             <Ionicons
               name={icon as any}
               size={iconSize}
               color={iconColor || getTextColor()}
-              style={styles.icon}
+              style={title ? styles.icon : {}}
             />
-          )}
-          <Text
-            style={[
-              styles.text,
-              { color: getTextColor(), fontSize: getFontSize() },
-              textStyle,
-            ]}
-          >
-            {title}
-          </Text>
+          ) : null}
+          {title ? (
+            <Text
+              style={StyleSheet.flatten([
+                styles.text,
+                { color: getTextColor(), fontSize: getFontSize() },
+                textStyle,
+              ])}
+            >
+              {title}
+            </Text>
+          ) : null}
         </View>
       )}
     </TouchableOpacity>
@@ -140,6 +153,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 10,
   },
   text: {
     ...TYPOGRAPHY.montserrat.bold,

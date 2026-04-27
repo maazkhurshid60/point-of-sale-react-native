@@ -51,7 +51,7 @@ export const OrdersScreen: React.FC = () => {
 
   const renderHeader = () => (
     <View style={styles.header}>
-      <View style={[styles.headerInner, { maxWidth: contentMaxWidth, alignSelf: 'center' }]}>
+      <View style={StyleSheet.flatten([styles.headerInner, { maxWidth: contentMaxWidth, alignSelf: 'center' }])}>
         <View>
           <Text style={styles.breadcrumb}>Dashboard / <Text style={{ color: COLORS.primary }}>Orders List</Text></Text>
           <Text style={styles.title}>Orders Management</Text>
@@ -70,31 +70,33 @@ export const OrdersScreen: React.FC = () => {
 
     return (
       <View style={styles.paginationContainer}>
-        <View style={[styles.paginationInner, { maxWidth: contentMaxWidth, alignSelf: 'center' }]}>
-          <Pressable
-            style={[styles.pageButton, !pagination.hasPrevPage && styles.pageButtonDisabled]}
+        <View style={StyleSheet.flatten([styles.paginationInner, { maxWidth: contentMaxWidth, alignSelf: 'center' }])}>
+          <CustomButton
+            title="Previous"
             onPress={() => pagination.hasPrevPage && fetchOrders(pagination.currentPage - 1)}
             disabled={!pagination.hasPrevPage || isLoading}
-          >
-            <FontAwesome6 name="chevron-left" size={12} color={!pagination.hasPrevPage ? COLORS.greyText : COLORS.primary} />
-            <Text style={[styles.pageButtonText, !pagination.hasPrevPage && { color: COLORS.greyText }]}>Previous</Text>
-          </Pressable>
+            variant="outline"
+            style={StyleSheet.flatten([styles.pageButton, !pagination.hasPrevPage && styles.pageButtonDisabled])}
+            textStyle={StyleSheet.flatten([styles.pageButtonText, !pagination.hasPrevPage && { color: COLORS.greyText }])}
+            iconComponent={<FontAwesome6 name="chevron-left" size={12} color={!pagination.hasPrevPage ? COLORS.greyText : COLORS.primary} />}
+          />
 
           <View style={styles.pageIndicator}>
             <Text style={styles.pageInfoText}>
               Page <Text style={{ color: COLORS.primary, fontWeight: '700' }}>{pagination.currentPage}</Text>
             </Text>
-            {pagination.total > 0 && <Text style={styles.totalRecordsText}>{pagination.total} Records Found</Text>}
+            {pagination.total > 0 && <Text style={styles.totalRecordsText}>{pagination.total} Orders Found</Text>}
           </View>
 
-          <Pressable
-            style={[styles.pageButton, !pagination.hasNextPage && styles.pageButtonDisabled]}
+          <CustomButton
+            title="Next"
             onPress={() => pagination.hasNextPage && fetchOrders(pagination.currentPage + 1)}
             disabled={!pagination.hasNextPage || isLoading}
-          >
-            <Text style={[styles.pageButtonText, !pagination.hasNextPage && { color: COLORS.greyText }]}>Next</Text>
-            <FontAwesome6 name="chevron-right" size={12} color={!pagination.hasNextPage ? COLORS.greyText : COLORS.primary} />
-          </Pressable>
+            variant="outline"
+            style={StyleSheet.flatten([styles.pageButton, !pagination.hasNextPage && styles.pageButtonDisabled])}
+            textStyle={StyleSheet.flatten([styles.pageButtonText, !pagination.hasNextPage && { color: COLORS.greyText }])}
+            iconComponent={<FontAwesome6 name="chevron-right" size={12} color={!pagination.hasNextPage ? COLORS.greyText : COLORS.primary} />}
+          />
         </View>
       </View>
     );
@@ -122,7 +124,7 @@ export const OrdersScreen: React.FC = () => {
     return (
       <View key={item.id || idx} style={styles.tableRow}>
         <View style={{ flex: 0.8 }}>
-          <Text style={[styles.cellText, { color: COLORS.greyText }]}>{item.id}</Text>
+          <Text style={StyleSheet.flatten([styles.cellText, { color: COLORS.greyText }])}>{item.id}</Text>
         </View>
         <View style={{ flex: 1.5 }}>
           <Text style={styles.cellText}>
@@ -136,7 +138,7 @@ export const OrdersScreen: React.FC = () => {
           <Text style={styles.cellText} numberOfLines={1}>-</Text>
         </View>
         <View style={{ flex: 2.0 }}>
-          <Text style={[styles.cellText, { color: COLORS.primary }]} numberOfLines={1}>{customerName}</Text>
+          <Text style={StyleSheet.flatten([styles.cellText, { color: COLORS.primary }])} numberOfLines={1}>{customerName}</Text>
         </View>
         <View style={{ flex: 1.0 }}>
           <Text style={styles.cellText}>{item.store_id}</Text>
@@ -148,18 +150,17 @@ export const OrdersScreen: React.FC = () => {
           <Text style={styles.cellText}>{item.total_quantity}</Text>
         </View>
         <View style={{ flex: 1.2, alignItems: 'flex-end' }}>
-          <Text style={[styles.cellText, styles.totalText]}>{Number(item.total_bill).toLocaleString()}</Text>
+          <Text style={StyleSheet.flatten([styles.cellText, styles.totalText])}>{Number(item.total_bill).toLocaleString()}</Text>
         </View>
 
-        <View style={[styles.cell, { flex: 1.5, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 8 }]}>
+        <View style={StyleSheet.flatten([styles.cell, { flex: 1.5, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 8 }])}>
           <CustomButton
             title=""
-            icon="trash-can"
             onPress={() => handleAction('Delete', item)}
             variant="danger"
             size="small"
-            iconSize={12}
-            style={styles.deleteBtnCustom}
+            style={StyleSheet.flatten([styles.deleteBtnCustom, { width: 32, height: 32, borderRadius: 8 }])}
+            iconComponent={<FontAwesome6 name="trash-can" size={12} color="white" />}
           />
 
           <View style={styles.dropdownContainer}>
@@ -195,11 +196,11 @@ export const OrdersScreen: React.FC = () => {
       {renderHeader()}
 
       <View style={styles.mainContent}>
-        <View style={[
+        <View style={StyleSheet.flatten([
           styles.tableBlock,
           { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' },
           isLandscape && { flex: 1 }
-        ]}>
+        ])}>
           <ScrollView horizontal={true} showsHorizontalScrollIndicator={true} style={{ flex: 1 }}>
             <View style={{ minWidth: 1100, flex: 1 }}>
               {renderTableHeader()}

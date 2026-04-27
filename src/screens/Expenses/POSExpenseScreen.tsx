@@ -17,6 +17,7 @@ import { useAuthStore } from '../../store/useAuthStore';
 import { useUIStore } from '../../store/useUIStore';
 import { COLORS } from '../../constants/colors';
 import { TYPOGRAPHY } from '../../constants/typography';
+import { CustomButton } from '../../components/common/CustomButton';
 
 export const POSExpenseScreen: React.FC = () => {
   const { width } = useWindowDimensions();
@@ -109,10 +110,10 @@ export const POSExpenseScreen: React.FC = () => {
   };
 
   const renderInput = (label: string, value: string, onChange: (t: string) => void, placeholder: string, keyboard: any = 'default', multi = false) => (
-    <View style={[styles.fieldContainer, isTablet && styles.tabletField]}>
+    <View style={StyleSheet.flatten([styles.fieldContainer, isTablet && styles.tabletField])}>
       <Text style={styles.label}>{label}</Text>
       <TextInput
-        style={[styles.input, multi && styles.textArea]}
+        style={StyleSheet.flatten([styles.input, multi && styles.textArea])}
         value={value}
         onChangeText={onChange}
         placeholder={placeholder}
@@ -128,18 +129,23 @@ export const POSExpenseScreen: React.FC = () => {
     <View style={styles.container}>
       {/* Themed Header */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => setScreen('DEFAULT')}>
-          <Ionicons name="arrow-back" size={24} color={COLORS.primary} />
-          <Text style={styles.backText}>Back</Text>
-        </TouchableOpacity>
+        <CustomButton
+          onPress={() => setScreen('DEFAULT')}
+          variant="none"
+          size="none"
+          style={styles.backButton}
+          iconComponent={<Ionicons name="arrow-back" size={24} color={COLORS.primary} />}
+          title="Back"
+          textStyle={styles.backText}
+        />
         <Text style={styles.headerTitle}>Add POS Expense</Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.formCard}>
-          <View style={[styles.row, !isTablet && styles.column]}>
+          <View style={StyleSheet.flatten([styles.row, !isTablet && styles.column])}>
             {/* Account Head Selector */}
-            <View style={[styles.fieldContainer, isTablet && styles.tabletField]}>
+            <View style={StyleSheet.flatten([styles.fieldContainer, isTablet && styles.tabletField])}>
               <Text style={styles.label}>Head *</Text>
               <View style={styles.pickerContainer}>
                 <TextInput
@@ -166,30 +172,30 @@ export const POSExpenseScreen: React.FC = () => {
             {renderInput('Account No', formData.account_no, (t) => setFormData({ ...formData, account_no: t }), 'Enter account number')}
           </View>
 
-          <View style={[styles.row, !isTablet && styles.column]}>
+          <View style={StyleSheet.flatten([styles.row, !isTablet && styles.column])}>
             {renderInput('Amount *', formData.amount, (t) => setFormData({ ...formData, amount: t }), '0.00', 'numeric')}
 
-            <View style={[styles.fieldContainer, isTablet && styles.tabletField]}>
+            <View style={StyleSheet.flatten([styles.fieldContainer, isTablet && styles.tabletField])}>
               <Text style={styles.label}>Payment Method</Text>
               <View style={styles.methodToggle}>
                 {['cash', 'bank', 'card'].map((method) => (
-                  <TouchableOpacity
+                  <CustomButton
                     key={method}
-                    style={[styles.methodBtn, formData.payment_method === method && styles.activeMethod]}
+                    title={method.toUpperCase()}
+                    variant={formData.payment_method === method ? 'primary' : 'none'}
+                    size="none"
+                    style={StyleSheet.flatten([styles.methodBtn, formData.payment_method === method && styles.activeMethod])}
+                    textStyle={StyleSheet.flatten([styles.methodBtnText, formData.payment_method === method && styles.activeMethodText])}
                     onPress={() => setFormData({ ...formData, payment_method: method })}
-                  >
-                    <Text style={[styles.methodBtnText, formData.payment_method === method && styles.activeMethodText]}>
-                      {method.toUpperCase()}
-                    </Text>
-                  </TouchableOpacity>
+                  />
                 ))}
               </View>
             </View>
           </View>
 
-          <View style={[styles.row, !isTablet && styles.column]}>
+          <View style={StyleSheet.flatten([styles.row, !isTablet && styles.column])}>
             {/* Proper Date Picker Field */}
-            <View style={[styles.fieldContainer, isTablet && styles.tabletField]}>
+            <View style={StyleSheet.flatten([styles.fieldContainer, isTablet && styles.tabletField])}>
               <Text style={styles.label}>Date</Text>
               <TouchableOpacity
                 style={styles.input}
@@ -210,7 +216,7 @@ export const POSExpenseScreen: React.FC = () => {
             </View>
 
             {/* Select Account Selector */}
-            <View style={[styles.fieldContainer, isTablet && styles.tabletField]}>
+            <View style={StyleSheet.flatten([styles.fieldContainer, isTablet && styles.tabletField])}>
               <Text style={styles.label}>Select Account</Text>
               <View style={styles.pickerContainer}>
                 <TextInput
@@ -240,8 +246,8 @@ export const POSExpenseScreen: React.FC = () => {
           {isAccountsPayable && (
             <View style={styles.payableSection}>
               <Text style={styles.sectionTitle}>Supplier Details</Text>
-              <View style={[styles.row, !isTablet && styles.column]}>
-                <View style={[styles.fieldContainer, isTablet && styles.tabletField]}>
+              <View style={StyleSheet.flatten([styles.row, !isTablet && styles.column])}>
+                <View style={StyleSheet.flatten([styles.fieldContainer, isTablet && styles.tabletField])}>
                   <Text style={styles.label}>Select PO</Text>
                   <View style={styles.pickerContainer}>
                     <TextInput
@@ -265,26 +271,37 @@ export const POSExpenseScreen: React.FC = () => {
                   </View>
                 </View>
 
-                <View style={[styles.fieldContainer, isTablet && styles.tabletField]}>
+                <View style={StyleSheet.flatten([styles.fieldContainer, isTablet && styles.tabletField])}>
                   <Text style={styles.label}>Deposit Slip</Text>
-                  <TouchableOpacity style={styles.filePicker} onPress={handlePickDocument}>
-                    <FontAwesome6 name="paperclip" size={16} color={COLORS.primary} />
-                    <Text style={styles.filePickerText}>
-                      {attachment ? attachment.name : 'Select File'}
-                    </Text>
-                  </TouchableOpacity>
+                  <CustomButton
+                    onPress={handlePickDocument}
+                    variant="none"
+                    size="none"
+                    style={styles.filePicker}
+                    iconComponent={<FontAwesome6 name="paperclip" size={16} color={COLORS.primary} />}
+                    title={attachment ? attachment.name : 'Select File'}
+                    textStyle={styles.filePickerText}
+                  />
                 </View>
               </View>
             </View>
           )}
 
           <View style={styles.actionRow}>
-            <TouchableOpacity style={styles.cancelBtn} onPress={() => setScreen('DEFAULT')}>
-              <Text style={styles.cancelBtnText}>Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.saveBtn} onPress={handleSubmit} disabled={loading}>
-              {loading ? <ActivityIndicator color="white" /> : <Text style={styles.saveBtnText}>Save Record</Text>}
-            </TouchableOpacity>
+            <CustomButton
+              title="Cancel"
+              onPress={() => setScreen('DEFAULT')}
+              variant="outline"
+              style={styles.cancelBtn}
+              textStyle={styles.cancelBtnText}
+            />
+            <CustomButton
+              title="Save Record"
+              onPress={handleSubmit}
+              isLoading={loading}
+              disabled={loading}
+              style={styles.saveBtn}
+            />
           </View>
         </View>
       </ScrollView>

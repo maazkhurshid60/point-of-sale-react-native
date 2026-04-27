@@ -18,6 +18,7 @@ import { CartItemRow } from '../../components/billing/CartItemRow';
 import { useDialogStore } from '../../store/useDialogStore';
 import { ProductsListing } from '../../components/catalog/ProductsListing';
 import { COLORS } from '../../constants/colors';
+import { CustomButton } from '../../components/common/CustomButton';
 import { formatSaleResponseToSlipData } from '../../utils/invoiceMapping';
 
 export default function POSScreen() {
@@ -112,27 +113,52 @@ export default function POSScreen() {
           onPress={() => setShowMoreOptions(false)}
         >
           <View style={styles.moreOptionsContent}>
-            <TouchableOpacity style={styles.optionItem} onPress={() => handleMoreAction('print-invoice')}>
-              <FontAwesome6 name="file-invoice" size={20} color="white" style={styles.optionIcon} />
-              <Text style={styles.optionText}>Print Invoice</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.optionItem} onPress={() => handleMoreAction('print-bill')}>
-              <FontAwesome6 name="receipt" size={20} color="white" style={styles.optionIcon} />
-              <Text style={styles.optionText}>Print Bill</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.optionItem} onPress={() => handleMoreAction('print-quotation')}>
-              <FontAwesome6 name="file-contract" size={20} color="white" style={styles.optionIcon} />
-              <Text style={styles.optionText}>Print Quotation</Text>
-            </TouchableOpacity>
+            <CustomButton
+              onPress={() => handleMoreAction('print-invoice')}
+              variant="none"
+              size="none"
+              style={styles.optionItem}
+              textStyle={styles.optionText}
+              iconComponent={<FontAwesome6 name="file-invoice" size={20} color="white" style={styles.optionIcon} />}
+              title="Print Invoice"
+            />
+            <CustomButton
+              onPress={() => handleMoreAction('print-bill')}
+              variant="none"
+              size="none"
+              style={styles.optionItem}
+              textStyle={styles.optionText}
+              iconComponent={<FontAwesome6 name="receipt" size={20} color="white" style={styles.optionIcon} />}
+              title="Print Bill"
+            />
+            <CustomButton
+              onPress={() => handleMoreAction('print-quotation')}
+              variant="none"
+              size="none"
+              style={styles.optionItem}
+              textStyle={styles.optionText}
+              iconComponent={<FontAwesome6 name="file-contract" size={20} color="white" style={styles.optionIcon} />}
+              title="Print Quotation"
+            />
             <View style={styles.optionDivider} />
-            <TouchableOpacity style={styles.optionItem} onPress={() => handleMoreAction('print-sample')}>
-              <FontAwesome6 name="vial" size={20} color="white" style={styles.optionIcon} />
-              <Text style={styles.optionText}>Sample</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.optionItem} onPress={() => handleMoreAction('coupon')}>
-              <FontAwesome6 name="ticket" size={20} color="white" style={styles.optionIcon} />
-              <Text style={styles.optionText}>Coupon</Text>
-            </TouchableOpacity>
+            <CustomButton
+              onPress={() => handleMoreAction('print-sample')}
+              variant="none"
+              size="none"
+              style={styles.optionItem}
+              textStyle={styles.optionText}
+              iconComponent={<FontAwesome6 name="vial" size={20} color="white" style={styles.optionIcon} />}
+              title="Sample"
+            />
+            <CustomButton
+              onPress={() => handleMoreAction('coupon')}
+              variant="none"
+              size="none"
+              style={styles.optionItem}
+              textStyle={styles.optionText}
+              iconComponent={<FontAwesome6 name="ticket" size={20} color="white" style={styles.optionIcon} />}
+              title="Coupon"
+            />
           </View>
         </TouchableOpacity>
       </Modal>
@@ -150,31 +176,36 @@ export default function POSScreen() {
         </View>
 
         <View style={styles.headerRight}>
-          <TouchableOpacity
-            style={styles.iconButton}
+          <CustomButton
             onPress={() => showDialog('CUSTOMER_SELECTION', {})}
-          >
-            <FontAwesome6 name="user" size={18} color="white" />
-          </TouchableOpacity>
-          <TouchableOpacity
+            variant="none"
+            size="none"
             style={styles.iconButton}
+            iconComponent={<FontAwesome6 name="user" size={18} color="white" />}
+          />
+          <CustomButton
             onPress={() => showDialog('SALESMAN_SELECTION', {})}
-          >
-            <FontAwesome6 name="user-tie" size={18} color="white" />
-          </TouchableOpacity>
-          <TouchableOpacity
+            variant="none"
+            size="none"
             style={styles.iconButton}
+            iconComponent={<FontAwesome6 name="user-tie" size={18} color="white" />}
+          />
+          <CustomButton
             onPress={() => showDialog('ADD_PRODUCT_BY', {})}
-          >
-            <FontAwesome6 name="barcode" size={20} color="white" />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.scanButton}
+            variant="none"
+            size="none"
+            style={styles.iconButton}
+            iconComponent={<FontAwesome6 name="barcode" size={20} color="white" />}
+          />
+          <CustomButton
             onPress={() => showDialog('SCAN_BARCODE_WEB', {})}
-          >
-            <FontAwesome6 name="expand" size={16} color="white" />
-            <Text style={styles.scanButtonText}>Scan Barcode</Text>
-          </TouchableOpacity>
+            variant="none"
+            size="none"
+            style={styles.scanButton}
+            iconComponent={<FontAwesome6 name="expand" size={16} color="white" />}
+            title="Scan Barcode"
+            textStyle={styles.scanButtonText}
+          />
         </View>
       </View>
 
@@ -221,42 +252,55 @@ export default function POSScreen() {
         </View>
 
         <View style={styles.actionButtons}>
-          <TouchableOpacity
-            style={styles.moreButton}
+          <CustomButton
             onPress={() => setShowMoreOptions(true)}
-          >
-            <FontAwesome6 name="ellipsis-vertical" size={20} color="#6b7280" />
-          </TouchableOpacity>
+            variant="none"
+            size="none"
+            style={styles.moreButton}
+            iconComponent={<FontAwesome6 name="ellipsis-vertical" size={20} color="#6b7280" />}
+          />
 
-          <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#ff6b52' }]} onPress={clearCart}>
-            <Text style={styles.btnText}>Cancel</Text>
-          </TouchableOpacity>
+          <CustomButton
+            title="Cancel"
+            onPress={clearCart}
+            variant="none"
+            size="none"
+            style={StyleSheet.flatten([styles.actionBtn, { backgroundColor: '#ff6b52' }])}
+            textStyle={styles.btnText}
+          />
 
-          <TouchableOpacity
-            style={[styles.actionBtn, { backgroundColor: '#ffbb44' }]}
+          <CustomButton
+            title={isHolding ? '...' : 'Hold'}
             onPress={handleHold}
             disabled={isHolding}
-          >
-            <Text style={styles.btnText}>{isHolding ? '...' : 'Hold'}</Text>
-          </TouchableOpacity>
+            variant="none"
+            size="none"
+            style={StyleSheet.flatten([styles.actionBtn, { backgroundColor: '#ffbb44' }])}
+            textStyle={styles.btnText}
+          />
 
-          <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#7b1fa2' }]}>
-            <Text style={styles.btnText}>Order</Text>
-          </TouchableOpacity>
+          <CustomButton
+            title="Order"
+            onPress={() => { }}
+            variant="none"
+            size="none"
+            style={StyleSheet.flatten([styles.actionBtn, { backgroundColor: '#7b1fa2' }])}
+            textStyle={styles.btnText}
+          />
 
-          <TouchableOpacity 
-            style={[styles.actionBtn, { backgroundColor: '#0288d1' }]}
+          <CustomButton
+            title="Payment"
             onPress={() => {
               if (cartItems.length > 0) {
                 setPaymentScreenValues(totalToPay, totalToPay);
                 setScreen('PAYMENT');
-              } else {
-                // Ignore or could show an alert
               }
             }}
-          >
-            <Text style={styles.btnText}>Payment</Text>
-          </TouchableOpacity>
+            variant="none"
+            size="none"
+            style={StyleSheet.flatten([styles.actionBtn, { backgroundColor: '#0288d1' }])}
+            textStyle={styles.btnText}
+          />
 
           <TouchableOpacity
             style={styles.cashButton}
@@ -510,8 +554,9 @@ const styles = StyleSheet.create({
   optionItem: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: "flex-start",
+    paddingLeft: 20,
     paddingVertical: 12,
-    paddingHorizontal: 15,
   },
   optionIcon: {
     width: 28,

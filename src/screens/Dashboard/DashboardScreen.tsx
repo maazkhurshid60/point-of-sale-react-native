@@ -35,6 +35,7 @@ import AddCustomerScreen from '../Customer/AddCustomerScreen';
 import DashboardMainScreen from './DashboardMainScreen';
 
 import { COLORS } from '../../constants/colors';
+import { CustomButton } from '../../components/common/CustomButton';
 
 
 export default function DashboardScreen() {
@@ -146,26 +147,23 @@ export default function DashboardScreen() {
 
         {activeScreen === "DEFAULT" ? (
 
-          <TouchableOpacity
-            onPress={() => {
-              // Sign out logic
-              useAuthStore.getState().signOut();
-            }}
+          <CustomButton
+            title="Sign Out"
+            onPress={() => useAuthStore.getState().signOut()}
             style={styles.signOutButton}
-          >
-            <Text style={styles.signOutText}>Sign Out</Text>
-            <FontAwesome6 name="right-from-bracket" size={16} color="white" />
-          </TouchableOpacity>
+            iconComponent={<FontAwesome6 name="right-from-bracket" size={16} color="white" />}
+          />
 
         )
           : (
             <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
-              <TouchableOpacity
+              <CustomButton
                 onPress={() => useUIStore.getState().toggleRightMenu(true)}
+                variant="primary"
+                size="none"
                 style={styles.menuButton}
-              >
-                <FontAwesome6 name="bars" size={20} color={COLORS.white} />
-              </TouchableOpacity>
+                iconComponent={<FontAwesome6 name="bars" size={20} color={COLORS.white} />}
+              />
             </View>
 
           )
@@ -190,7 +188,7 @@ export default function DashboardScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ca13e6ff', // Signature purple background
+    backgroundColor: COLORS.primary, // Signature purple background
   },
   header: {
     paddingHorizontal: 20,

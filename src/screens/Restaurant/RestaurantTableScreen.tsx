@@ -145,9 +145,9 @@ const DraggableTable: React.FC<TableProps> = ({ table, onSelect, onUpdatePositio
   return (
     <GestureDetector gesture={panGesture}>
       <Animated.View
-        style={[
+        style={StyleSheet.flatten([
           styles.tableContainer,
-          animatedStyle,
+          animatedStyle as any,
           {
             width: table.width,
             height: table.height,
@@ -156,7 +156,7 @@ const DraggableTable: React.FC<TableProps> = ({ table, onSelect, onUpdatePositio
             zIndex: table.isSelected ? 50 : 1,
             borderColor: table.isSelected ? '#FFD700' : '#A0AEC0',
           },
-        ]}
+        ])}
       >
         <Text style={styles.tableText}>{table.tableName}</Text>
         {table.listofChairs.map((count, index) => (
@@ -212,7 +212,7 @@ const DraggableDecoration: React.FC<DecorationProps> = ({ decoration, onSelect, 
   return (
     <GestureDetector gesture={panGesture}>
       <Animated.View
-        style={[
+        style={StyleSheet.flatten([
           {
             position: 'absolute',
             width: decoration.width,
@@ -221,8 +221,8 @@ const DraggableDecoration: React.FC<DecorationProps> = ({ decoration, onSelect, 
             borderColor: '#FFD700',
             zIndex: decoration.isSelected ? 50 : 1,
           },
-          animatedStyle,
-        ]}
+          animatedStyle as any,
+        ])}
       >
         <Image source={LEAF_IMG} style={{ width: '100%', height: '100%' }} resizeMode="contain" />
       </Animated.View>
@@ -318,12 +318,19 @@ export const RestaurantTableScreen: React.FC = () => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => setScreen('RESTAURANT_FLOORS')}>
-          <View style={styles.backCirc}>
-            <Ionicons name="chevron-back" size={20} color={COLORS.primary} />
-          </View>
-          <Text style={styles.backText}>Floors</Text>
-        </TouchableOpacity>
+        <CustomButton
+          onPress={() => setScreen('RESTAURANT_FLOORS')}
+          variant="none"
+          size="none"
+          style={styles.backButton}
+          iconComponent={
+            <View style={styles.backCirc}>
+              <Ionicons name="chevron-back" size={20} color={COLORS.primary} />
+            </View>
+          }
+          title="Floors"
+          textStyle={styles.backText}
+        />
         <Text style={styles.headerTitle}>{store.currentFloor?.floorName || 'Floor Editor'}</Text>
         <View style={styles.headerActions}>
           <CustomButton 
@@ -365,7 +372,7 @@ export const RestaurantTableScreen: React.FC = () => {
               <View style={styles.properRow}>
                 <Text style={styles.properLabel}>Tables Used</Text>
                 <View style={styles.badgeContainer}>
-                  <Text style={[styles.badgeText, tablesInCurrentFloor.length >= (store.currentFloor?.noOfTable || 0) && { color: '#E53E3E' }]}>
+                  <Text style={StyleSheet.flatten([styles.badgeText, tablesInCurrentFloor.length >= (store.currentFloor?.noOfTable || 0) && { color: '#E53E3E' }])}>
                     {tablesInCurrentFloor.length} / {store.currentFloor?.noOfTable || 0}
                   </Text>
                 </View>
@@ -424,16 +431,16 @@ export const RestaurantTableScreen: React.FC = () => {
                   <Text style={styles.properLabel}>Shape Mode</Text>
                   <View style={styles.properToggle}>
                     <TouchableOpacity
-                      style={[styles.toggBtn, !selectedTable.isRounded && styles.toggBtnActive]}
+                      style={StyleSheet.flatten([styles.toggBtn, !selectedTable.isRounded && styles.toggBtnActive])}
                       onPress={() => !selectedTable.isRounded || store.toggleTableShape(selectedTable.tableId)}
                     >
-                      <Text style={[styles.toggText, !selectedTable.isRounded && styles.toggTextActive]}>Square</Text>
+                      <Text style={StyleSheet.flatten([styles.toggText, !selectedTable.isRounded && styles.toggTextActive])}>Square</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
-                      style={[styles.toggBtn, selectedTable.isRounded && styles.toggBtnActive]}
+                      style={StyleSheet.flatten([styles.toggBtn, selectedTable.isRounded && styles.toggBtnActive])}
                       onPress={() => selectedTable.isRounded || store.toggleTableShape(selectedTable.tableId)}
                     >
-                      <Text style={[styles.toggText, selectedTable.isRounded && styles.toggTextActive]}>Round</Text>
+                      <Text style={StyleSheet.flatten([styles.toggText, selectedTable.isRounded && styles.toggTextActive])}>Round</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -447,7 +454,7 @@ export const RestaurantTableScreen: React.FC = () => {
                     <Text style={styles.countNum}>{selectedTable.chairsCount}</Text>
                     <TouchableOpacity
                       onPress={() => store.addChair(selectedTable.tableId)}
-                      style={[styles.circBtn, selectedTable.chairsCount >= 16 && { opacity: 0.5 }]}
+                      style={StyleSheet.flatten([styles.circBtn, selectedTable.chairsCount >= 16 && { opacity: 0.5 }])}
                       disabled={selectedTable.chairsCount >= 16}
                     >
                       <Ionicons name="add" size={18} color="white" />

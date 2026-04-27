@@ -19,6 +19,7 @@ import { useAuthStore } from '../../store/useAuthStore';
 import { COLORS } from '../../constants/colors';
 import { TYPOGRAPHY } from '../../constants/typography';
 import { useUIStore } from '../../store/useUIStore';
+import { CustomButton } from '../../components/common/CustomButton';
 
 const AddCustomerScreen: React.FC = () => {
   const { width } = useWindowDimensions();
@@ -117,26 +118,25 @@ const AddCustomerScreen: React.FC = () => {
 
   const renderHeader = () => (
     <View style={styles.header}>
-      <TouchableOpacity style={{ flexDirection: "row", gap: 10, alignItems: "center" }} onPress={() => setScreen('POS_BILLING')}>
-        <FontAwesome6 style={{
-          backgroundColor: COLORS.primary,
-          padding: 10,
-          borderRadius: 100
-        }} name="arrow-left" size={24} color={COLORS.white} />
-        <Text style={styles.title}>Customers</Text>
-      </TouchableOpacity>
-
+      <CustomButton
+        onPress={() => setScreen('POS_BILLING')}
+        variant="primary"
+        size="none"
+        style={StyleSheet.flatten([{ padding: 10, borderRadius: 100, width: 44, height: 44 }])}
+        iconComponent={<FontAwesome6 name="arrow-left" size={24} color={COLORS.white} />}
+      />
+      <Text style={styles.title}>Customers Management</Text>
     </View>
   );
 
   const renderInputField = (label: string, value: string, field: string, placeholder: string, keyboardType: any = 'default', required: boolean = false) => (
-    <View style={[styles.inputGroup, { width: isTablet ? '48%' : '100%' }]}>
+    <View style={StyleSheet.flatten([styles.inputGroup, { width: isTablet ? '48%' : '100%' }])}>
       <View style={styles.labelRow}>
         <Text style={styles.label}>{label}</Text>
         {required && <Text style={styles.requiredStar}>*</Text>}
       </View>
       <TextInput
-        style={[styles.input, errors[field] && styles.inputError]}
+        style={StyleSheet.flatten([styles.input, errors[field] && styles.inputError])}
         placeholder={placeholder}
         placeholderTextColor={COLORS.greyText}
         value={value}
@@ -148,12 +148,12 @@ const AddCustomerScreen: React.FC = () => {
   );
 
   const renderPickerField = (label: string, value: string, field: string, options: { label: string, value: string }[], required: boolean = false) => (
-    <View style={[styles.inputGroup, { width: isTablet ? '48%' : '100%' }]}>
+    <View style={StyleSheet.flatten([styles.inputGroup, { width: isTablet ? '48%' : '100%' }])}>
       <View style={styles.labelRow}>
         <Text style={styles.label}>{label}</Text>
         {required && <Text style={styles.requiredStar}>*</Text>}
       </View>
-      <View style={[styles.input, { paddingHorizontal: 0, justifyContent: 'center', overflow: 'hidden' }, errors[field] && styles.inputError]}>
+      <View style={StyleSheet.flatten([styles.input, { paddingHorizontal: 0, justifyContent: 'center', overflow: 'hidden' }, errors[field] && styles.inputError])}>
         <Picker
           selectedValue={value}
           onValueChange={(itemValue) => setFormData({ ...formData, [field]: itemValue })}
@@ -243,20 +243,14 @@ const AddCustomerScreen: React.FC = () => {
           </View>
         </View>
 
-        <Pressable
-          style={[styles.submitBtn, isLoading && styles.submitBtnDisabled]}
+        <CustomButton
+          title="Save Customer"
           onPress={handleSubmit}
+          isLoading={isLoading}
           disabled={isLoading}
-        >
-          {isLoading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <>
-              <FontAwesome6 name="user-plus" size={16} color="#fff" />
-              <Text style={styles.submitBtnText}>Save Customer</Text>
-            </>
-          )}
-        </Pressable>
+          style={styles.submitBtn}
+          iconComponent={<FontAwesome6 name="user-plus" size={16} color="#fff" />}
+        />
 
         <View style={{ height: 100 }} />
       </ScrollView>
