@@ -15,7 +15,7 @@ export interface OfflineSale {
 
 interface OfflineSalesState {
   sales: OfflineSale[];
-  
+
   // Actions
   addOfflineSale: (sale: OfflineSale) => void;
   removeOfflineSale: (saleId: string) => void;

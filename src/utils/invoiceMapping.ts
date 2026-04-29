@@ -1,4 +1,5 @@
 import { useAuthStore } from "../store/useAuthStore";
+import { useShiftStore } from "../store/useShiftStore";
 
 /**
  * Standardizes any sale/invoice API response into a common structure
@@ -8,6 +9,7 @@ export const formatSaleResponseToSlipData = (result: any) => {
   if (!result) return null;
 
   const authState = useAuthStore.getState();
+  const shiftState = useShiftStore.getState();
 
   const saleDataRaw = Array.isArray(result.sale) ? result.sale[0] : (result.sale || result.quotation || result.cashSaleData?.sale || result.saleData || result);
   
@@ -53,7 +55,7 @@ export const formatSaleResponseToSlipData = (result: any) => {
     result.business || 
     result.lead ||
     result.cashSaleData?.company || 
-    authState.currentStore || 
+    shiftState.currentStore || 
     {};
 
   // 5. Salesman Mapping

@@ -1,22 +1,19 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   ScrollView,
   Pressable,
-  Dimensions,
   Animated,
   Easing,
   RefreshControl,
-  useWindowDimensions,
+  StyleSheet,
 } from 'react-native';
-import { FontAwesome6, Ionicons } from '@expo/vector-icons';
+import { FontAwesome6 } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useAuthStore } from '../../store/useAuthStore';
-import { useUIStore } from '../../store/useUIStore';
-import { useDialogStore } from '../../store/useDialogStore';
 import { COLORS } from '../../constants/colors';
+import { styles } from './DashboardMainScreen.styles';
+import { useDashboardMainController } from './hooks/useDashboardMainController';
 
 interface StatCardProps {
   title: string;
@@ -28,10 +25,10 @@ interface StatCardProps {
 }
 
 const StatCard = ({ title, amount, icon, gradientColors, delay, width }: StatCardProps) => {
-  const scaleAnim = useRef(new Animated.Value(0)).current;
-  const rotateAnim = useRef(new Animated.Value(1)).current;
+  const scaleAnim = React.useRef(new Animated.Value(0)).current;
+  const rotateAnim = React.useRef(new Animated.Value(1)).current;
 
-  useEffect(() => {
+  React.useEffect(() => {
     Animated.spring(scaleAnim, {
       toValue: 1,
       tension: 50,
@@ -47,7 +44,7 @@ const StatCard = ({ title, amount, icon, gradientColors, delay, width }: StatCar
       easing: Easing.out(Easing.back(1.5)),
       useNativeDriver: true,
     }).start();
-  }, []);
+  }, [delay, rotateAnim, scaleAnim]);
 
   const spin = rotateAnim.interpolate({
     inputRange: [0, 1],
@@ -101,10 +98,10 @@ interface NavCardProps {
 }
 
 const NavCard = ({ title, subtitle, icon, onPress, gradientColors, delay, width }: NavCardProps) => {
-  const popAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(1)).current;
+  const popAnim = React.useRef(new Animated.Value(0)).current;
+  const slideAnim = React.useRef(new Animated.Value(1)).current;
 
-  useEffect(() => {
+  React.useEffect(() => {
     Animated.spring(popAnim, {
       toValue: 1,
       tension: 40,
@@ -120,7 +117,7 @@ const NavCard = ({ title, subtitle, icon, onPress, gradientColors, delay, width 
       easing: Easing.out(Easing.exp),
       useNativeDriver: true,
     }).start();
-  }, []);
+  }, [delay, popAnim, slideAnim]);
 
   return (
     <Animated.View
@@ -195,43 +192,17 @@ const NavCard = ({ title, subtitle, icon, onPress, gradientColors, delay, width 
 };
 
 export default function DashboardMainScreen() {
-  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
-  const isTabletOrLaptop = screenWidth > 800;
-
-  const isShiftOpened = useAuthStore((state) => state.isShiftOpened);
-  const currentUser = useAuthStore((state) => state.currentUser);
-  const currentStore = useAuthStore((state) => state.currentStore);
-  const fetchShiftDetails = useAuthStore((state) => state.fetchShiftDetails);
-  const fetchDailyCashReports = useAuthStore((state) => state.fetchDailyCashReports);
-  const setScreen = useUIStore((state) => state.setScreen);
-  const showDialog = useDialogStore((state) => state.showDialog);
-
-  const [refreshing, setRefreshing] = useState(false);
-
-  const onRefresh = useCallback(async () => {
-    setRefreshing(true);
-    try {
-      await Promise.all([
-        fetchShiftDetails(),
-        fetchDailyCashReports()
-      ]);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setTimeout(() => setRefreshing(false), 800);
-    }
-  }, []);
-
-  const handlePOSClick = () => {
-    if (isShiftOpened) {
-      setScreen('POS_BILLING');
-    } else {
-      showDialog('OPEN_SHIFT', {});
-    }
-  };
-
-  const statCardWidth = isTabletOrLaptop ? (screenWidth - 80) / 4 : (screenWidth - 52) / 2;
-  const navCardWidth = isTabletOrLaptop ? (screenWidth - 88) / 3 : (screenWidth - 40);
+  const {
+    isTabletOrLaptop,
+    refreshing,
+    currentUser,
+    currentStore,
+    statCardWidth,
+    navCardWidth,
+    onRefresh,
+    handlePOSClick,
+    setScreen,
+  } = useDashboardMainController();
 
   return (
     <View style={styles.container}>
@@ -251,7 +222,6 @@ export default function DashboardMainScreen() {
           />
         }
       >
-        {/* The Gradient is now INSIDE a View so it scrolls away */}
         <View style={styles.scrollingHeader}>
           <LinearGradient
             colors={[COLORS.primary, '#4c1d95']}
@@ -281,35 +251,18 @@ export default function DashboardMainScreen() {
           </View>
         </View>
 
-        {/* The rest of the content begins AFTER the gradient header */}
         <View style={styles.mainFeed}>
-          {isTabletOrLaptop && (
-            <Pressable style={styles.dateSelectorContainerTablet}>
-              <View style={styles.dateSelector}>
-                <View style={styles.dateSelectorInner}>
-                  <FontAwesome6 name="calendar-days" size={14} color={COLORS.primary} />
-                  <Text style={styles.dateText}>April 14, 2026</Text>
-                </View>
-                <View style={StyleSheet.flatten([styles.filterBadge, { backgroundColor: COLORS.primary }])}>
-                  <FontAwesome6 name="sliders" size={12} color="white" />
-                </View>
+          <Pressable style={isTabletOrLaptop ? styles.dateSelectorContainerTablet : styles.dateSelectorContainer}>
+            <View style={styles.dateSelector}>
+              <View style={styles.dateSelectorInner}>
+                <FontAwesome6 name="calendar-days" size={14} color={COLORS.primary} />
+                <Text style={styles.dateText}>April 14, 2026</Text>
               </View>
-            </Pressable>
-          )}
-
-          {!isTabletOrLaptop && (
-            <Pressable style={styles.dateSelectorContainer}>
-              <View style={styles.dateSelector}>
-                <View style={styles.dateSelectorInner}>
-                  <FontAwesome6 name="calendar-days" size={14} color={COLORS.primary} />
-                  <Text style={styles.dateText}>April 14, 2026</Text>
-                </View>
-                <View style={StyleSheet.flatten([styles.filterBadge, { backgroundColor: COLORS.primary }])}>
-                  <FontAwesome6 name="sliders" size={12} color="white" />
-                </View>
+              <View style={StyleSheet.flatten([styles.filterBadge, { backgroundColor: COLORS.primary }])}>
+                <FontAwesome6 name="sliders" size={12} color="white" />
               </View>
-            </Pressable>
-          )}
+            </View>
+          </Pressable>
 
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Business Overview</Text>
@@ -385,15 +338,6 @@ export default function DashboardMainScreen() {
               delay={800}
               width={navCardWidth}
             />
-            {/* <NavCard
-              title="Table Management"
-              subtitle="Coordinate floor layouts, chair counts and restaurant flow"
-              icon="table-cells-large"
-              onPress={() => setScreen('RESTAURANT_TABLES')}
-              gradientColors={['#8B5CF6', '#7C3AED']}
-              delay={950}
-              width={navCardWidth}
-            /> */}
           </View>
         </View>
         <View style={{ height: 40 }} />
@@ -401,247 +345,3 @@ export default function DashboardMainScreen() {
     </View>
   );
 }
-
-const { width } = Dimensions.get('window');
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F1F5F9',
-  },
-  contentContainer: {
-    flexGrow: 1,
-  },
-  scrollingHeader: {
-    height: 200,
-    width: '100%',
-    justifyContent: 'center',
-    paddingHorizontal: 20,
-    position: 'relative',
-    overflow: 'hidden',
-  },
-  heroGradientScroll: {
-    ...StyleSheet.absoluteFillObject,
-    borderBottomLeftRadius: 50,
-    borderBottomRightRadius: 50,
-  },
-  mainFeed: {
-    paddingHorizontal: 20,
-    marginTop: -20, // Negative margin to overlap slightly with the gradient curve
-  },
-  heroSection: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 20,
-  },
-  welcomeText: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.7)',
-    fontWeight: '600',
-  },
-  userNameText: {
-    fontSize: 26,
-    fontWeight: '900',
-    color: 'white',
-    marginTop: 2,
-    letterSpacing: -0.5,
-  },
-  storeBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 20,
-    marginTop: 8,
-    alignSelf: 'flex-start',
-    gap: 6
-  },
-  storeText: {
-    fontSize: 11,
-    color: 'white',
-    fontWeight: '700',
-  },
-  avatarContainer: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    padding: 4,
-  },
-  avatarInner: {
-    flex: 1,
-    borderRadius: 22,
-    backgroundColor: 'white',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  heroRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  dateSelectorContainer: {
-    marginBottom: 28,
-  },
-  dateSelectorContainerTablet: {
-    marginRight: 8,
-    marginBottom: 28,
-  },
-  dateSelector: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderRadius: 20,
-    backgroundColor: 'white',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.1,
-    shadowRadius: 20,
-    elevation: 8,
-  },
-  dateSelectorInner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  dateText: {
-    color: '#1E293B',
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  filterBadge: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#1E293B',
-    letterSpacing: -0.3,
-  },
-  viewAllBadge: {
-    backgroundColor: 'white',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
-    elevation: 2,
-  },
-  sectionAction: {
-    fontSize: 11,
-    color: COLORS.primary,
-    fontWeight: '700',
-    textTransform: 'uppercase'
-  },
-  statsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-    marginBottom: 32,
-  },
-  statCard: {
-    backgroundColor: 'white',
-    borderRadius: 24,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.06,
-    shadowRadius: 20,
-    elevation: 5,
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
-  },
-  iconContainer: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  statInfo: {
-    flex: 1,
-  },
-  statTitle: {
-    fontSize: 10,
-    color: '#94A3B8',
-    fontWeight: '800',
-    letterSpacing: 0.8,
-    marginBottom: 4,
-  },
-  statAmount: {
-    fontSize: 22,
-    fontWeight: '900',
-    color: '#1E293B',
-    letterSpacing: -0.5,
-  },
-  navContainer: {
-    gap: 14,
-  },
-  navCard: {
-    backgroundColor: 'white',
-    borderRadius: 24,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.05,
-    shadowRadius: 20,
-    elevation: 5,
-  },
-  navContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  navIconBg: {
-    width: 60,
-    height: 60,
-    borderRadius: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  navTextContainer: {
-    flex: 1,
-    paddingRight: 8,
-    paddingLeft: 15
-  },
-  navCardTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#1E293B',
-    marginBottom: 2,
-  },
-  navCardSubtitle: {
-    fontSize: 12,
-    color: '#64748B',
-    lineHeight: 18,
-    fontWeight: '500',
-  },
-  arrowIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#F8FAFC',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
-  },
-});

@@ -219,7 +219,6 @@ const RightSideMenu: React.FC = () => {
                 />
 
                 <View style={styles.sectionDivider} />
-
                 <Pressable
                   onPress={handleSignOut}
                   style={({ pressed }) => [
@@ -227,17 +226,22 @@ const RightSideMenu: React.FC = () => {
                     { backgroundColor: pressed ? 'rgba(239, 68, 68, 0.2)' : 'rgba(239, 68, 68, 0.1)' }
                   ]}
                 >
-                  <FontAwesome6 name="arrow-right-from-bracket" size={20} color="#ef4444" />
-                  <Text style={styles.signOutText}>Sign Out</Text>
+
+                  {isSigningOut ? (
+
+                    <ActivityIndicator color="#08a872ff" size="small" />
+
+                  ) : (
+                    <>
+                      <FontAwesome6 name="arrow-right-from-bracket" size={20} color="#ef4444" />
+                      <Text style={styles.signOutText}>Sign Out</Text>
+                    </>
+                  )}
                 </Pressable>
+
               </View>
 
 
-              {isSigningOut && (
-                <View style={styles.loadingOverlay}>
-                  <ActivityIndicator color="white" size="large" />
-                </View>
-              )}
             </ScrollView>
           </View>
         </LinearGradient>
@@ -351,6 +355,7 @@ const styles = StyleSheet.create({
   signOutButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     padding: 16,
     borderRadius: 16,
     marginTop: 20,

@@ -1,114 +1,78 @@
-// import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
-// import { API_ENDPOINTS } from '../../constants/apiEndpoints';
-// import { Store, POSId, Customer, Salesman, CashAccount, BankAccount, CreditCardAccount, CategoryModel, ProductModel } from '../../models';
-// import { fetchCatalog } from '../baseFetcher';
-// import axiosClient from '../axiosClient';
-// import { useAuthStore } from '../../store/useAuthStore';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import axiosClient from '../axiosClient';
+import { API_ENDPOINTS } from '../../constants/apiEndpoints';
+import { Store, Customer, CashAccount, BankAccount, CreditCardAccount } from '../../models';
 
-// export const useStores = () => {
-//   return useQuery<Store[]>({
-//     queryKey: ['stores'],
-//     queryFn: () => fetchCatalog(API_ENDPOINTS.CATALOG.STORES),
-//     staleTime: 1000 * 60 * 5,
-//   });
-// };
+// Generic fetcher for catalog items
+const fetchCatalog = async <T>(endpoint: string): Promise<T[]> => {
+  const response = await axiosClient.get(endpoint);
+  return response.data?.success ? (response.data.data ?? response.data.stores ?? response.data.accounts ?? response.data.customers ?? []) : [];
+};
 
-// export const usePOSIDs = () => {
-//   return useQuery<POSId[]>({
-//     queryKey: ['posIds'],
-//     queryFn: () => fetchCatalog(API_ENDPOINTS.SHIFT.POS_OPTIONS),
-//     staleTime: 1000 * 60 * 10,
-//   });
-// };
+export const useStores = () => {
+  return useQuery<Store[]>({
+    queryKey: ['stores'],
+    queryFn: async () => {
+      try {
+        const res = await axiosClient.get(API_ENDPOINTS.CATALOG.STORES);
+        return (res.data?.success && res.data.store) ? res.data.store : [];
+      } catch (e) {
+        return [];
+      }
+    },
+    staleTime: 1000 * 60 * 5,
+  });
+};
 
-// export const useCustomers = () => {
-//   return useQuery<Customer[]>({
-//     queryKey: ['customers'],
-//     queryFn: () => fetchCatalog(API_ENDPOINTS.CATALOG.CUSTOMERS),
-//   });
-// };
+export const useCustomers = () => {
+  return useQuery<Customer[]>({
+    queryKey: ['customers'],
+    queryFn: () => fetchCatalog(API_ENDPOINTS.CATALOG.CUSTOMERS),
+  });
+};
 
-// export const useSalesman = () => {
-//   return useQuery<Salesman[]>({
-//     queryKey: ['salesmen'],
-//     queryFn: () => fetchCatalog(API_ENDPOINTS.SHIFT.SALES_MAN),
-//   });
-// };
+export const useCashAccounts = () => {
+  return useQuery<CashAccount[]>({
+    queryKey: ['cashAccounts'],
+    queryFn: () => fetchCatalog(API_ENDPOINTS.CATALOG.CASH_ACCOUNTS),
+  });
+};
 
-// export const useCashAccounts = () => {
-//   return useQuery<CashAccount[]>({
-//     queryKey: ['cashAccounts'],
-//     queryFn: () => fetchCatalog(API_ENDPOINTS.CATALOG.CASH_ACCOUNTS),
-//   });
-// };
+export const useBankAccounts = () => {
+  return useQuery<BankAccount[]>({
+    queryKey: ['bankAccounts'],
+    queryFn: () => fetchCatalog(API_ENDPOINTS.CATALOG.BANK_ACCOUNTS),
+  });
+};
 
-// export const useBankAccounts = () => {
-//   return useQuery<BankAccount[]>({
-//     queryKey: ['bankAccounts'],
-//     queryFn: () => fetchCatalog(API_ENDPOINTS.CATALOG.BANK_ACCOUNTS),
-//   });
-// };
+export const useCreditCardAccounts = () => {
+  return useQuery<CreditCardAccount[]>({
+    queryKey: ['creditCardAccounts'],
+    queryFn: () => fetchCatalog(API_ENDPOINTS.CATALOG.CREDIT_CARD_ACCOUNTS),
+  });
+};
 
-// export const useCreditCardAccounts = () => {
-//   return useQuery<CreditCardAccount[]>({
-//     queryKey: ['creditCardAccounts'],
-//     queryFn: () => fetchCatalog(API_ENDPOINTS.CATALOG.CREDIT_CARD_ACCOUNTS),
-//   });
-// };
+export const useOrders = (page: number = 1) => {
+  return useQuery({
+    queryKey: ['orders', page],
+    queryFn: async () => {
+      const response = await axiosClient.get(API_ENDPOINTS.CATALOG.GET_ALL_ORDERS, {
+        params: { page }
+      });
+      return response.data?.orders || { data: [], total: 0 };
+    },
+  });
+};
 
-// export const useCategories = () => {
-//   return useQuery<CategoryModel[]>({
-//     queryKey: ['categories'],
-//     queryFn: async () => {
-//       const baseURL = useAuthStore.getState().baseURL;
-//       const token = useAuthStore.getState().authToken;
-//       const res = await axiosClient.get(`${baseURL}${API_ENDPOINTS.CATALOG.POS_CATEGORY}`, {
-//         headers: { Authorization: `Bearer ${token}` }
-//       });
-//       return res.data?.success ? res.data.Products : [];
-//     },
-//     staleTime: 1000 * 60 * 30, // 30 minutes
-//   });
-// };
-
-// export const useInfiniteProducts = (catId?: number | string, keyword?: string) => {
-//   const storeId = useAuthStore.getState().currentStore?.store_id;
-
-//   return useInfiniteQuery({
-//     queryKey: ['products', catId, keyword],
-//     queryFn: async ({ pageParam = 1 }) => {
-//       const baseURL = useAuthStore.getState().baseURL;
-//       const token = useAuthStore.getState().authToken;
-
-//       const response = await axiosClient.get(`${baseURL}${API_ENDPOINTS.POS.PRODUCTS}`, {
-//         params: {
-//           page: pageParam,
-//           store_id: storeId,
-//           cat_id: catId === 'all' ? null : catId,
-//           keyword: keyword || null,
-//         },
-//         headers: { Authorization: `Bearer ${token}` }
-//       });
-
-//       const responseData = response.data;
-//       const data = responseData.data;
-//       const products = data.Products.map((p: any) => p as ProductModel);
-//       const nextLink = responseData.links.next;
-
-//       // Extract page number from next link if it exists
-//       let nextPage = undefined;
-//       if (nextLink) {
-//         const url = new URL(nextLink);
-//         nextPage = Number(url.searchParams.get('page'));
-//       }
-
-//       return {
-//         products,
-//         nextPage,
-//         total: data.total,
-//       };
-//     },
-//     initialPageParam: 1,
-//     getNextPageParam: (lastPage) => lastPage.nextPage,
-//   });
-// };
+export const useDeleteOrder = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (orderId: number) => {
+      console.log("Deleting order:", orderId);
+      return { success: true };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+    }
+  });
+};

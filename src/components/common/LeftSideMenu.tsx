@@ -12,7 +12,9 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FontAwesome6 } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useAuthStore } from '../../store/useAuthStore';
+import { useShiftStore } from '../../store/useShiftStore';
+import { useAccountStore } from '../../store/useAccountStore';
+import { useSettingsStore } from '../../store/useSettingsStore';
 import { useUIStore } from '../../store/useUIStore';
 import { ProductsListing } from '../catalog/ProductsListing';
 import { COLORS } from '../../constants/colors';
@@ -31,11 +33,12 @@ const LeftSideMenu: React.FC = () => {
   const toggleLeftMenu = useUIStore((state) => state.toggleLeftMenu);
   const setScreen = useUIStore((state) => state.setScreen);
 
-  const currentStore = useAuthStore((state) => state.currentStore);
-  const leadSettings = useAuthStore((state) => state.leadSettings);
-  const cashAccounts = useAuthStore((state) => state.cashAccounts);
-  const fetchCashAccounts = useAuthStore((state) => state.fetchCashAccounts);
-  const updateCashAccount = useAuthStore((state) => state.updateCashAccount);
+  const currentStore = useShiftStore((state) => state.currentStore);
+  const leadSettings = useSettingsStore((state) => state.leadSettings);
+  const cashAccounts = useAccountStore((state) => state.cashAccounts);
+  const fetchCashAccounts = useAccountStore((state) => state.fetchCashAccounts);
+  const updateCashAccount = (name: string, id: number) =>
+    useAccountStore.getState().updateDefaultCashAccount(id, useShiftStore.getState().currentShift?.shift_id ?? 0);
 
   const animValue = useRef(new Animated.Value(0)).current;
 

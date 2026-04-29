@@ -1,17 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   TouchableOpacity,
   ScrollView,
-  useWindowDimensions,
   ImageBackground,
   TextInput,
   Image,
-  Alert,
-  ActivityIndicator,
-  Modal
 } from 'react-native';
 import { FontAwesome6, MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import Animated, {
@@ -23,13 +18,12 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Slider from '@react-native-community/slider';
-import { useAuthStore } from '../../store/useAuthStore';
-import { useUIStore } from '../../store/useUIStore';
 import { COLORS } from '../../constants/colors';
-import { TYPOGRAPHY } from '../../constants/typography';
 import { TableModel, DecorationModel } from '../../models';
 import { CustomButton } from '../../components/common/CustomButton';
 import { ActionModal } from '../../components/common/ActionModal';
+import { styles } from './RestaurantTableScreen.styles';
+import { useRestaurantController } from './hooks/useRestaurantController';
 
 const TABLE_MIN_SIZE = 50;
 const FLOOR_BG = require('../../../assets/images/floor.png');
@@ -68,8 +62,6 @@ const Chairs: React.FC<ChairProps> = ({ side, count }) => {
 
   return <View style={getStyle()}>{chairs}</View>;
 };
-
-// --- Professional Control Card ---
 
 const ControlCard: React.FC<{ title: string; children: React.ReactNode; icon: string }> = ({ title, children, icon }) => (
   <Animated.View
@@ -145,18 +137,18 @@ const DraggableTable: React.FC<TableProps> = ({ table, onSelect, onUpdatePositio
   return (
     <GestureDetector gesture={panGesture}>
       <Animated.View
-        style={StyleSheet.flatten([
+        style={[
           styles.tableContainer,
-          animatedStyle as any,
+          animatedStyle,
           {
             width: table.width,
             height: table.height,
-            borderRadius: table.isRounded ? 100 : 8,
+            borderRadius: table.isRounded ? table.width / 2 : 8,
             borderWidth: table.isSelected ? 3 : 1,
             zIndex: table.isSelected ? 50 : 1,
             borderColor: table.isSelected ? '#FFD700' : '#A0AEC0',
           },
-        ])}
+        ]}
       >
         <Text style={styles.tableText}>{table.tableName}</Text>
         {table.listofChairs.map((count, index) => (
@@ -173,8 +165,6 @@ const DraggableTable: React.FC<TableProps> = ({ table, onSelect, onUpdatePositio
     </GestureDetector>
   );
 };
-
-// --- Draggable Decoration Component ---
 
 interface DecorationProps {
   decoration: DecorationModel;
@@ -212,7 +202,7 @@ const DraggableDecoration: React.FC<DecorationProps> = ({ decoration, onSelect, 
   return (
     <GestureDetector gesture={panGesture}>
       <Animated.View
-        style={StyleSheet.flatten([
+        style={[
           {
             position: 'absolute',
             width: decoration.width,
@@ -221,8 +211,8 @@ const DraggableDecoration: React.FC<DecorationProps> = ({ decoration, onSelect, 
             borderColor: '#FFD700',
             zIndex: decoration.isSelected ? 50 : 1,
           },
-          animatedStyle as any,
-        ])}
+          animatedStyle,
+        ]}
       >
         <Image source={LEAF_IMG} style={{ width: '100%', height: '100%' }} resizeMode="contain" />
       </Animated.View>
@@ -233,87 +223,21 @@ const DraggableDecoration: React.FC<DecorationProps> = ({ decoration, onSelect, 
 // --- Main Screen ---
 
 export const RestaurantTableScreen: React.FC = () => {
-  const { width: windowWidth } = useWindowDimensions();
-  const store = useAuthStore();
-  const setScreen = useUIStore((state) => state.setScreen);
-  const [isSaving, setIsSaving] = useState(false);
-  const [isLoadingFloor, setIsLoadingFloor] = useState<number | null>(null);
-  const [modalConfig, setModalConfig] = useState<{ 
-    visible: boolean; 
-    type: 'success' | 'error' | 'confirm'; 
-    title: string; 
-    message: string;
-    onConfirm?: () => void;
-  }>({
-    visible: false,
-    type: 'success',
-    title: '',
-    message: ''
-  });
-
-  const selectedTable = store.listOfTables.find(t => t.isSelected);
-  const selectedDecoration = store.listofdecorations.find(d => d.isSelected);
-
-  useEffect(() => {
-    if (store.listOfFloors.length === 0) {
-      store.addFloor();
-    }
-  }, []);
-
-  const tablesInCurrentFloor = store.listOfTables.filter(
-    (t) => Number(t.floorid) === Number(store.currentFloor?.floorId)
-  );
-
-  const decorationsInCurrentFloor = store.listofdecorations.filter(
-    (d) => Number(d.floor) === Number(store.currentFloor?.floorId)
-  );
-
-  const handleSelectTable = (id: number) => {
-    store.updateTableSelection(id);
-    store.updateDecorationSelection(null);
-  };
-
-  const handleSelectDecoration = (id: number) => {
-    store.updateDecorationSelection(id);
-    store.updateTableSelection(null);
-  };
-
-  const handleSave = async () => {
-    setIsSaving(true);
-    const result = await store.saveFloorLayout();
-    setIsSaving(false);
-    if (result.success) {
-      if (store.currentFloor) {
-        await store.fetchFloorDetails(store.currentFloor.floorId);
-      }
-      setModalConfig({
-        visible: true,
-        type: 'success',
-        title: "Great Success!",
-        message: "Restaurant layout saved successfully!"
-      });
-    } else {
-      setModalConfig({
-        visible: true,
-        type: 'error',
-        title: "Oops! Something went wrong",
-        message: result.message || "Failed to save restaurant layout. Please try again."
-      });
-    }
-  };
-
-  const confirmRemoveFloor = () => {
-    setModalConfig({
-      visible: true,
-      type: 'confirm',
-      title: "Delete Floor",
-      message: `Are you sure you want to delete "${store.currentFloor?.floorName}" and all its tables? This action cannot be undone until you save.`,
-      onConfirm: () => {
-        store.removeFloor();
-        setModalConfig(prev => ({ ...prev, visible: false }));
-      }
-    });
-  };
+  const {
+    store,
+    selectedTable,
+    selectedDecoration,
+    tablesInCurrentFloor,
+    decorationsInCurrentFloor,
+    isSaving,
+    modalConfig,
+    setScreen,
+    handleSelectTable,
+    handleSelectDecoration,
+    handleSave,
+    confirmRemoveFloor,
+    closeModal,
+  } = useRestaurantController();
 
   return (
     <View style={styles.container}>
@@ -372,7 +296,7 @@ export const RestaurantTableScreen: React.FC = () => {
               <View style={styles.properRow}>
                 <Text style={styles.properLabel}>Tables Used</Text>
                 <View style={styles.badgeContainer}>
-                  <Text style={StyleSheet.flatten([styles.badgeText, tablesInCurrentFloor.length >= (store.currentFloor?.noOfTable || 0) && { color: '#E53E3E' }])}>
+                  <Text style={[styles.badgeText, tablesInCurrentFloor.length >= (store.currentFloor?.noOfTable || 0) && { color: '#E53E3E' }]}>
                     {tablesInCurrentFloor.length} / {store.currentFloor?.noOfTable || 0}
                   </Text>
                 </View>
@@ -431,16 +355,16 @@ export const RestaurantTableScreen: React.FC = () => {
                   <Text style={styles.properLabel}>Shape Mode</Text>
                   <View style={styles.properToggle}>
                     <TouchableOpacity
-                      style={StyleSheet.flatten([styles.toggBtn, !selectedTable.isRounded && styles.toggBtnActive])}
+                      style={[styles.toggBtn, !selectedTable.isRounded && styles.toggBtnActive]}
                       onPress={() => !selectedTable.isRounded || store.toggleTableShape(selectedTable.tableId)}
                     >
-                      <Text style={StyleSheet.flatten([styles.toggText, !selectedTable.isRounded && styles.toggTextActive])}>Square</Text>
+                      <Text style={[styles.toggText, !selectedTable.isRounded && styles.toggTextActive]}>Square</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
-                      style={StyleSheet.flatten([styles.toggBtn, selectedTable.isRounded && styles.toggBtnActive])}
+                      style={[styles.toggBtn, selectedTable.isRounded && styles.toggBtnActive]}
                       onPress={() => selectedTable.isRounded || store.toggleTableShape(selectedTable.tableId)}
                     >
-                      <Text style={StyleSheet.flatten([styles.toggText, selectedTable.isRounded && styles.toggTextActive])}>Round</Text>
+                      <Text style={[styles.toggText, selectedTable.isRounded && styles.toggTextActive]}>Round</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -454,7 +378,7 @@ export const RestaurantTableScreen: React.FC = () => {
                     <Text style={styles.countNum}>{selectedTable.chairsCount}</Text>
                     <TouchableOpacity
                       onPress={() => store.addChair(selectedTable.tableId)}
-                      style={StyleSheet.flatten([styles.circBtn, selectedTable.chairsCount >= 16 && { opacity: 0.5 }])}
+                      style={[styles.circBtn, selectedTable.chairsCount >= 16 && { opacity: 0.5 }]}
                       disabled={selectedTable.chairsCount >= 16}
                     >
                       <Ionicons name="add" size={18} color="white" />
@@ -541,7 +465,7 @@ export const RestaurantTableScreen: React.FC = () => {
         type={modalConfig.type}
         title={modalConfig.title}
         message={modalConfig.message}
-        onClose={() => setModalConfig({ ...modalConfig, visible: false })}
+        onClose={closeModal}
         onConfirm={modalConfig.onConfirm}
       />
 
@@ -549,127 +473,4 @@ export const RestaurantTableScreen: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F0F2F5' },
-  header: {
-    height: 70,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    backgroundColor: 'white',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
-    zIndex: 100
-  },
-  backButton: { flexDirection: 'row', alignItems: 'center', width: 120 },
-  backCirc: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#F7FAFC', justifyContent: 'center', alignItems: 'center', marginRight: 10 },
-  backText: { ...TYPOGRAPHY.montserrat.semiBold, fontSize: 13, color: '#4A5568' },
-  headerTitle: { flex: 1, textAlign: 'center', ...TYPOGRAPHY.montserrat.bold, fontSize: 18, color: '#1A202C' },
-  headerActions: { width: 120, alignItems: 'flex-end' },
-  topSaveBtn: { backgroundColor: '#6750A4', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 12 },
-  topSaveBtnText: { color: 'white', ...TYPOGRAPHY.montserrat.bold, fontSize: 12 },
-  mainContent: { flex: 1, flexDirection: 'row' },
-  sidebarSolid: { width: 280, backgroundColor: '#2D1F5C' },
-  properCard: { backgroundColor: '#3C2A7D', borderRadius: 16, marginHorizontal: 15, marginTop: 15, padding: 15, borderWidth: 1, borderColor: '#4E3B94' },
-  properCardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-  iconCircle: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#4E3B94', justifyContent: 'center', alignItems: 'center', marginRight: 10 },
-  properCardTitle: { color: 'white', ...TYPOGRAPHY.montserrat.bold, fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.8 },
-  properCardContent: {},
-  properRow: { marginBottom: 15 },
-  properLabel: { ...TYPOGRAPHY.montserrat.medium, fontSize: 11, color: '#A0AEC0', marginBottom: 5 },
-  properInput: { backgroundColor: '#4E3B94', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, color: 'white', ...TYPOGRAPHY.montserrat.semiBold, fontSize: 14 },
-  flexRow: { flexDirection: 'row', gap: 10 },
-  properActionBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#6750A4', paddingVertical: 10, paddingHorizontal: 12, borderRadius: 10, gap: 6, flex: 1, justifyContent: 'center' },
-  actionBtnText: { color: 'white', ...TYPOGRAPHY.montserrat.bold, fontSize: 11 },
-  sep: { height: 5 },
-  spreadRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  badgeContainer: { backgroundColor: '#2D1F5C', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, alignSelf: 'flex-start' },
-  badgeText: { color: '#FFD700', ...TYPOGRAPHY.montserrat.bold, fontSize: 12 },
-  properToggle: { flexDirection: 'row', backgroundColor: '#2D1F5C', borderRadius: 10, padding: 4 },
-  toggBtn: { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 8 },
-  toggBtnActive: { backgroundColor: 'white' },
-  toggText: { color: '#A0AEC0', ...TYPOGRAPHY.montserrat.bold, fontSize: 11 },
-  toggTextActive: { color: '#2D1F5C' },
-  counterRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 20 },
-  circBtn: { width: 34, height: 34, borderRadius: 17, backgroundColor: '#6750A4', justifyContent: 'center', alignItems: 'center' },
-  countNum: { color: 'white', ...TYPOGRAPHY.montserrat.bold, fontSize: 22 },
-  properDeleteBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#E53E3E', padding: 12, borderRadius: 12, marginTop: 10 },
-  quickGrid: { flexDirection: 'row', gap: 10 },
-  gridBtn: { flex: 1, backgroundColor: '#4E3B94', padding: 15, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  gridBtnText: { color: 'white', ...TYPOGRAPHY.montserrat.bold, fontSize: 11, marginTop: 5 },
-  properEmpty: { margin: 20, alignItems: 'center', padding: 25 },
-  properEmptyText: { color: '#A0AEC0', ...TYPOGRAPHY.montserrat.medium, fontSize: 11, textAlign: 'center', marginTop: 10 },
-  subText: { color: 'white', ...TYPOGRAPHY.montserrat.medium, fontSize: 12, marginBottom: 5 },
-  properCanvas: { flex: 1, padding: 20 },
-  floorHeaderSolid: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'white', paddingHorizontal: 20, paddingVertical: 12, borderRadius: 12, marginBottom: 15, alignSelf: 'flex-start', borderWidth: 1, borderColor: '#E2E8F0', gap: 10 },
-  floorStatusDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#48BB78' },
-  floorNameTitle: { ...TYPOGRAPHY.montserrat.bold, fontSize: 14, color: '#2D3748' },
-  properFloor: { flex: 1, backgroundColor: 'white', borderRadius: 20, borderWidth: 1, borderColor: '#1d7af3ff', overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 4 } },
-  tableContainer: { position: 'absolute', backgroundColor: '#C1873F', justifyContent: 'center', alignItems: 'center', elevation: 5, shadowColor: '#000', shadowOffset: { width: 0, height: 4 } },
-  tableText: { ...TYPOGRAPHY.montserrat.bold, fontSize: 11, color: 'rgba(0,0,0,0.8)', textAlign: 'center' },
-  resizeHandle: { position: 'absolute', right: -10, bottom: -10, width: 24, height: 24, backgroundColor: '#6750A4', borderRadius: 12, justifyContent: 'center', alignItems: 'center', zIndex: 100 },
-
-  // New Styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  statusModalContent: {
-    width: 320,
-    backgroundColor: 'white',
-    borderRadius: 30,
-    padding: 30,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.25,
-    shadowRadius: 15,
-    elevation: 10,
-  },
-  iconCircLarge: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  modalTitle: {
-    ...TYPOGRAPHY.montserrat.bold,
-    fontSize: 20,
-    color: '#2D3748',
-    textAlign: 'center',
-    marginBottom: 10,
-  },
-  modalMessage: {
-    ...TYPOGRAPHY.montserrat.medium,
-    fontSize: 14,
-    color: '#718096',
-    textAlign: 'center',
-    marginBottom: 25,
-  },
-  modalCloseBtn: {
-    width: '100%',
-    paddingVertical: 15,
-    borderRadius: 15,
-    alignItems: 'center',
-  },
-  modalCloseBtnText: {
-    color: 'white',
-    ...TYPOGRAPHY.montserrat.bold,
-    fontSize: 14,
-  },
-  modalActionRow: {
-    flexDirection: 'row',
-    gap: 12,
-    width: '100%',
-  },
-  modalBtnHalf: {
-    flex: 1,
-    paddingVertical: 15,
-    borderRadius: 15,
-    alignItems: 'center',
-  },
-});
+export default RestaurantTableScreen;

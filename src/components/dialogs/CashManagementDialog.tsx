@@ -12,7 +12,7 @@ import {
 import { COLORS } from '../../constants/colors';
 import { TYPOGRAPHY } from '../../constants/typography';
 import { FontAwesome6 } from '@expo/vector-icons';
-import { useUpdateCashManagement } from '../../api/queries';
+import { useUpdateCashManagement } from '../../api/shift/queries';
 
 interface CashManagementDialogProps {
   onClose: () => void;

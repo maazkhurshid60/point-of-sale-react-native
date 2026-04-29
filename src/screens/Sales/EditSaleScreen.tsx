@@ -1,40 +1,34 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   ScrollView,
   TextInput,
-  Pressable,
   ActivityIndicator,
-  useWindowDimensions,
   TouchableOpacity,
   Alert,
+  StyleSheet,
 } from 'react-native';
 import { FontAwesome6 } from '@expo/vector-icons';
-import { useSalesStore } from '../../store/useSalesStore';
-import { useUIStore } from '../../store/useUIStore';
-import { useAuthStore } from '../../store/useAuthStore';
 import { COLORS } from '../../constants/colors';
-import { TYPOGRAPHY } from '../../constants/typography';
-import { Picker } from '@react-native-picker/picker';
+import { CustomButton } from '../../components/common/CustomButton';
+import { CustomDropdown } from '../../components/common/CustomDropdown';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useEditSaleController } from './hooks/useEditSaleController';
+import { styles } from './EditSaleScreen.styles';
 
-// Conditional import for DateTimePicker to prevent crash if native module is missing
+// Conditional import for DateTimePicker
 let DateTimePicker: any;
 try {
   DateTimePicker = require('@react-native-community/datetimepicker').default;
 } catch (e) {
-  console.warn('DateTimePicker native module not found, falling back to manual input');
   DateTimePicker = null;
 }
 
 const EditSaleScreen: React.FC = () => {
-  const { width } = useWindowDimensions();
-  const isTablet = width > 768;
-  const setScreen = useUIStore((state) => state.setScreen);
-  const authStore = useAuthStore();
-
   const {
+    isTablet,
+    accountStore,
     currentlySelectedSale,
     returnProductsList,
     paymentsList,
@@ -44,7 +38,6 @@ const EditSaleScreen: React.FC = () => {
     updateReturnProduct,
     updateAdjustment,
     newAdjustment,
-    makeReturnSale,
     totalTax,
     totalDiscount,
     totalBill,
@@ -56,13 +49,17 @@ const EditSaleScreen: React.FC = () => {
     updatePayment,
     removePayment,
     searchProductBySku,
-    resetEditSale
-  } = useSalesStore();
-
-  const [skuSearch, setSkuSearch] = useState('');
-  const [showMethodMenu, setShowMethodMenu] = useState(false);
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [editingPaymentIndex, setEditingPaymentIndex] = useState<number | null>(null);
+    skuSearch,
+    setSkuSearch,
+    showDatePicker,
+    setShowDatePicker,
+    editingPaymentIndex,
+    setEditingPaymentIndex,
+    couponStatus,
+    handleValidateCoupon,
+    handleUpdate,
+    handleBack,
+  } = useEditSaleController();
 
   if (isLoading || !currentlySelectedSale) {
     return (
@@ -73,31 +70,16 @@ const EditSaleScreen: React.FC = () => {
     );
   }
 
-  const handleUpdate = async () => {
-    const success = await makeReturnSale(currentlySelectedSale.sale_id);
-    if (success) {
-      resetEditSale();
-      setScreen('SALES');
-    } else {
-      Alert.alert('Error', 'Failed to update sale.');
-    }
-  };
-
-  const handleBack = () => {
-    resetEditSale();
-    setScreen('SALES');
-  };
-
   const renderTableHeader = () => (
     <View style={styles.tableHeaderRow}>
       <View style={{ width: 40 }} />
-      <Text style={[styles.columnHeader, { flex: 1.5 }]}>SKU</Text>
-      <Text style={[styles.columnHeader, { flex: 2.5 }]}>Product</Text>
-      <Text style={[styles.columnHeader, { flex: 1 }]}>Price</Text>
-      <Text style={[styles.columnHeader, { flex: 0.8 }]}>Qty</Text>
-      <Text style={[styles.columnHeader, { flex: 1 }]}>Discount</Text>
-      <Text style={[styles.columnHeader, { flex: 1 }]}>Total</Text>
-      <Text style={[styles.columnHeader, { flex: 1.5 }]}>Status</Text>
+      <Text style={[styles.columnHeader, { width: 100, textAlign: 'center' }]} numberOfLines={1}>SKU</Text>
+      <Text style={[styles.columnHeader, { width: 250, textAlign: 'center' }]} numberOfLines={1}>Product</Text>
+      <Text style={[styles.columnHeader, { width: 80, textAlign: 'center' }]} numberOfLines={1}>Price</Text>
+      <Text style={[styles.columnHeader, { width: 100, textAlign: 'center' }]} numberOfLines={1}>Qty</Text>
+      <Text style={[styles.columnHeader, { width: 80, textAlign: 'center' }]} numberOfLines={1}>Discount</Text>
+      <Text style={[styles.columnHeader, { width: 100, textAlign: 'center' }]} numberOfLines={1}>Total</Text>
+      <Text style={[styles.columnHeader, { width: 100, textAlign: 'center' }]} numberOfLines={1}>Status</Text>
       <View style={{ width: 40 }} />
     </View>
   );
@@ -120,45 +102,47 @@ const EditSaleScreen: React.FC = () => {
           </TouchableOpacity>
         )}
       </View>
-      <Text style={[styles.cellText, { flex: 1.5 }]}>{item.sku}</Text>
-      <Text style={[styles.cellText, { flex: 2.5 }]} numberOfLines={1}>{item.product_name}</Text>
+      <Text style={[styles.cellText, { width: 100, textAlign: 'center' }]} numberOfLines={1}>{item.sku}</Text>
+      <Text style={[styles.cellText, { width: 250, textAlign: 'center' }]} numberOfLines={1}>{item.product_name}</Text>
 
       {isReturn ? (
-        <TextInput
-          style={[styles.cellInput, { flex: 1 }]}
-          value={String(item.price || '')}
-          keyboardType="numeric"
-          placeholder="0.00"
-          placeholderTextColor={COLORS.greyText}
-          onChangeText={(val) => updateReturnProduct(index, 'price', Number(val) || 0)}
-        />
+        <View style={{ width: 80, alignItems: 'center' }}>
+          <TextInput
+            style={[styles.cellInput, { width: '100%', textAlign: 'center' }]}
+            value={String(item.price || '')}
+            keyboardType="numeric"
+            placeholder="0.00"
+            placeholderTextColor={COLORS.greyText}
+            onChangeText={(val) => updateReturnProduct(index, 'price', Number(val) || 0)}
+          />
+        </View>
       ) : (
-        <Text style={[styles.cellText, { flex: 1 }]}>{item.price}</Text>
+        <Text style={[styles.cellText, { width: 80, textAlign: 'center' }]} numberOfLines={1}>{item.price}</Text>
       )}
 
       {isReturn ? (
-        <View style={[styles.qtyControl, { flex: 0.8 }]}>
+        <View style={[styles.qtyControl, { width: 100, justifyContent: 'center' }]}>
           <TouchableOpacity onPress={() => updateReturnProduct(index, 'qty', (item.qty || 0) - 1)}>
             <FontAwesome6 name="minus" size={12} color={COLORS.primary} />
           </TouchableOpacity>
-          <Text style={styles.qtyText}>{item.qty}</Text>
+          <Text style={[styles.qtyText, { textAlign: 'center' }]} numberOfLines={1}>{item.qty}</Text>
           <TouchableOpacity onPress={() => updateReturnProduct(index, 'qty', (item.qty || 0) + 1)}>
             <FontAwesome6 name="plus" size={12} color={COLORS.primary} />
           </TouchableOpacity>
         </View>
       ) : (
-        <Text style={[styles.cellText, { flex: 0.8 }]}>{item.qty}</Text>
+        <Text style={[styles.cellText, { width: 100, textAlign: 'center' }]} numberOfLines={1}>{item.qty}</Text>
       )}
 
-      <Text style={[styles.cellText, { flex: 1 }]}>
+      <Text style={[styles.cellText, { width: 80, textAlign: 'center' }]} numberOfLines={1}>
         {Number(item.discount_amount || 0).toFixed(2)}
       </Text>
 
-      <Text style={[styles.cellText, { flex: 1 }]}>
+      <Text style={[styles.cellText, { width: 100, textAlign: 'center' }]} numberOfLines={1}>
         {isReturn ? (Math.abs(item.qty) * Math.abs(item.price)).toFixed(2) : Number(item.total).toFixed(2)}
       </Text>
 
-      <View style={{ flex: 1.5, alignItems: 'flex-start' }}>
+      <View style={{ width: 100, alignItems: 'center' }}>
         {isReturn ? null : <StatusBadge status={item.status || 'Unfulfilled'} />}
       </View>
 
@@ -176,7 +160,7 @@ const EditSaleScreen: React.FC = () => {
 
   return (
     <ScrollView style={styles.container}>
-      <View style={styles.header}>
+      <LinearGradient colors={['#ffffff', '#f8fafc']} style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={handleBack}>
           <FontAwesome6 name="chevron-left" size={16} color={COLORS.textDark} />
           <Text style={styles.backText}>Back</Text>
@@ -191,7 +175,7 @@ const EditSaleScreen: React.FC = () => {
           <Text style={styles.infoText}>Sales Invoice: {currentlySelectedSale.invoice_no}</Text>
           <Text style={styles.infoText}>ID: {currentlySelectedSale.sale_id}</Text>
         </View>
-      </View>
+      </LinearGradient>
 
       <View style={styles.content}>
         <View style={styles.tableBlock}>
@@ -285,33 +269,43 @@ const EditSaleScreen: React.FC = () => {
         </View>
 
         <View style={styles.footerActions}>
-          <TouchableOpacity style={styles.advanceBtn} onPress={() => Alert.alert('Notice', 'Advance mode redirect logic happens here.')}>
-            <Text style={styles.advanceBtnText}>Edit Advance Mode</Text>
-          </TouchableOpacity>
+          <CustomButton
+            title="Edit Advance Mode"
+            onPress={() => Alert.alert('Notice', 'Advance mode redirect logic happens here.')}
+            variant="danger"
+            size="large"
+            style={{ flex: 1 }}
+          />
 
-          <TouchableOpacity style={styles.updateBtn} onPress={handleUpdate}>
-            <Text style={styles.updateBtnText}>Update Sale</Text>
-          </TouchableOpacity>
+          <CustomButton
+            title="Update Sale"
+            onPress={handleUpdate}
+            variant="primary"
+            size="large"
+            style={{ flex: 1 }}
+          />
         </View>
 
         {/* Transactions Table Section */}
         <View style={styles.transactionsHeader}>
           <Text style={styles.sectionTitle}>Transactions</Text>
           <View style={styles.methodButtonContainer}>
-            <Picker
+            <CustomDropdown
+              options={[
+                { label: "Cash", value: "Cash" },
+                { label: "Bank", value: "Bank" },
+                { label: "Card", value: "Card" },
+                { label: "Coupon", value: "Coupon" },
+              ]}
               selectedValue=""
-              style={styles.methodPicker}
-              dropdownIconColor="#000000"
-              mode="dropdown"
-              onValueChange={(itemValue) => {
-                if (itemValue) addPaymentMethod(0.0, itemValue);
+              onValueChange={(val) => {
+                if (val) addPaymentMethod(0.0, val);
               }}
-            >
-              <Picker.Item label="Add Method" value="" color={COLORS.greyText} style={{ backgroundColor: COLORS.white }} />
-              <Picker.Item label="Cash" value="Cash" color={COLORS.black} style={{ backgroundColor: COLORS.white }} />
-              <Picker.Item label="Bank" value="Bank" color={COLORS.black} style={{ backgroundColor: COLORS.white }} />
-              <Picker.Item label="Card" value="Card" color={COLORS.black} style={{ backgroundColor: COLORS.white }} />
-            </Picker>
+              placeholder="Add Method"
+              style={styles.methodPickerBtn}
+              textStyle={{ fontSize: 14 }}
+              iconColor={COLORS.primary}
+            />
           </View>
         </View>
 
@@ -323,85 +317,109 @@ const EditSaleScreen: React.FC = () => {
           >
             <View style={{ minWidth: isTablet ? '100%' : 900 }}>
               <View style={[styles.tableHeaderRow, { backgroundColor: COLORS.primary }]}>
-                <Text style={[styles.columnHeader, { flex: 1 }]}>Type</Text>
-                <Text style={[styles.columnHeader, { flex: 1 }]}>Method</Text>
-                <Text style={[styles.columnHeader, { flex: 2 }]}>Account</Text>
-                <Text style={[styles.columnHeader, { flex: 1.5 }]}>Date</Text>
-                <Text style={[styles.columnHeader, { flex: 1 }]}>Ref</Text>
-                <Text style={[styles.columnHeader, { flex: 1.5, textAlign: 'right' }]}>Amount</Text>
+                <Text style={[styles.columnHeader, { width: 80, textAlign: 'center' }]} numberOfLines={1}>Type</Text>
+                <Text style={[styles.columnHeader, { width: 100, textAlign: 'center' }]} numberOfLines={1}>Method</Text>
+                <Text style={[styles.columnHeader, { width: 180, textAlign: 'center' }]} numberOfLines={1}>Account</Text>
+                <Text style={[styles.columnHeader, { width: 120, textAlign: 'center' }]} numberOfLines={1}>Date</Text>
+                <Text style={[styles.columnHeader, { width: 140, textAlign: 'center' }]} numberOfLines={1}>Ref / Code</Text>
+                <Text style={[styles.columnHeader, { width: 120, textAlign: 'center' }]} numberOfLines={1}>Amount</Text>
                 <View style={{ width: 40 }} />
               </View>
 
 
-              {/* Original Transactions */}
-              {
+              {currentlySelectedSale.transactions.map((tr: any, idx: number) => (
+                <View key={`tr-${idx}`} style={styles.tableRow}>
+                  <Text style={[styles.cellText, { width: 80, textAlign: 'center' }]} numberOfLines={1}>{tr.type}</Text>
+                  <Text style={[styles.cellText, { width: 100, textAlign: 'center' }]} numberOfLines={1}>{tr.payment_method}</Text>
+                  <Text style={[styles.cellText, { width: 180, textAlign: 'center' }]} numberOfLines={1}>{tr.account_id || 'Cash'}</Text>
+                  <Text style={[styles.cellText, { width: 120, textAlign: 'center' }]} numberOfLines={1}>{new Date(tr.created_at).toLocaleDateString()}</Text>
+                  <Text style={[styles.cellText, { width: 140, textAlign: 'center' }]} numberOfLines={1}>{tr.ref || ''}</Text>
+                  <Text style={[styles.cellText, { width: 120, textAlign: 'center' }]} numberOfLines={1}>
+                    {Number(tr.amount).toFixed(2)}
+                    <FontAwesome6 name="lock" size={12} color={COLORS.textDark} style={{ marginLeft: 5 }} />
+                  </Text>
+                  <View style={{ width: 40 }} />
+                </View>
+              ))}
 
-                currentlySelectedSale.transactions.map((tr: any, idx: number) => (
-                  <View key={`tr-${idx}`} style={styles.tableRow}>
-                    <Text style={[styles.cellText, { flex: 1 }]}>{tr.type}</Text>
-                    <Text style={[styles.cellText, { flex: 1 }]}>{tr.payment_method}</Text>
-                    <Text style={[styles.cellText, { flex: 2 }]} numberOfLines={1}>{tr.account_id || 'Cash'}</Text>
-                    <Text style={[styles.cellText, { flex: 1.5 }]}>{new Date(tr.created_at).toLocaleDateString()}</Text>
-                    <Text style={[styles.cellText, { flex: 1 }]}>{tr.ref || ''}</Text>
-                    <Text style={[styles.cellText, { flex: 1.5, textAlign: 'right' }]}>
-                      {Number(tr.amount).toFixed(2)}
-                      <FontAwesome6 name="lock" size={12} color={COLORS.textDark} style={{ marginLeft: 5 }} />
-                    </Text>
-                    <View style={{ width: 40 }} />
-                  </View>
-                ))}
-
-              {/* New Payments */}
               {paymentsList.map((p: any, idx: number) => (
                 <View key={`pay-${idx}`} style={[styles.tableRow, { backgroundColor: 'white' }]}>
-                  <Text style={[styles.cellText, { flex: 1 }]}>{p.type}</Text>
-                  <Text style={[styles.cellText, { flex: 1 }]}>{p.method}</Text>
+                  <Text style={[styles.cellText, { width: 80, textAlign: 'center' }]} numberOfLines={1}>{p.type}</Text>
+                  <Text style={[styles.cellText, { width: 100, textAlign: 'center' }]} numberOfLines={1}>{p.method}</Text>
 
-                  <View style={{ flex: 2 }}>
-                    <Picker
-                      selectedValue={p.account_id}
-                      style={styles.cellPicker}
-                      dropdownIconColor={COLORS.primary}
-                      mode="dropdown"
-                      onValueChange={(val) => updatePayment(idx, 'account_id', val)}
-                    >
-                      {p.method === 'Cash' ? (
-                        authStore.cashAccounts.map((acc: any) => (
-                          <Picker.Item key={acc.id} label={acc.name} value={acc.id} color={COLORS.black} style={{ backgroundColor: COLORS.white }} />
-                        ))
-                      ) : (
-                        authStore.bankAccounts.map((acc: any) => (
-                          <Picker.Item key={acc.id} label={acc.name} value={acc.id} color={COLORS.black} style={{ backgroundColor: COLORS.white }} />
-                        ))
-                      )}
-                    </Picker>
+                  <View style={{ width: 180, alignItems: 'center' }}>
+                    {p.method === 'Coupon' ? (
+                      <Text style={[styles.cellText, { color: COLORS.greyText }]} numberOfLines={1}>N/A</Text>
+                    ) : (
+                      <CustomDropdown
+                        options={
+                          p.method === 'Cash'
+                            ? accountStore.cashAccounts.map((acc: any) => ({ label: acc.name, value: String(acc.id) }))
+                            : accountStore.bankAccounts.map((acc: any) => ({ label: acc.name, value: String(acc.id) }))
+                        }
+                        selectedValue={String(p.account_id || '')}
+                        onValueChange={(val) => updatePayment(idx, 'account_id', val)}
+                        placeholder="Select Account"
+                        style={[styles.cellPickerBtn, { width: '100%' }]}
+                        textStyle={{ fontSize: 13, textAlign: 'center' }}
+                        iconColor={COLORS.primary}
+                      />
+                    )}
                   </View>
-                  <TouchableOpacity
-                    style={[styles.cellInput, { flex: 1.5, justifyContent: 'center' }]}
-                    onPress={() => {
-                      setEditingPaymentIndex(idx);
-                      setShowDatePicker(true);
-                    }}
-                  >
-                    <Text style={{ color: COLORS.textDark, fontSize: 13 }}>
-                      {p.date || new Date().toISOString().split('T')[0]}
-                    </Text>
-                  </TouchableOpacity>
-                  <TextInput
-                    style={[styles.cellInput, { flex: 1, color: COLORS.textDark }]}
-                    placeholder="Ref"
-                    placeholderTextColor={COLORS.greyText}
-                    value={p.ref || ''}
-                    onChangeText={(val) => updatePayment(idx, 'ref', val)}
-                  />
-                  <TextInput
-                    style={[styles.cellInput, { flex: 1.5, textAlign: 'right', color: COLORS.textDark }]}
-                    value={String(p.amount || '')}
-                    keyboardType="numeric"
-                    placeholder="0.00"
-                    placeholderTextColor={COLORS.greyText}
-                    onChangeText={(val) => updatePayment(idx, 'amount', Number(val) || 0)}
-                  />
+                  <View style={{ width: 120, alignItems: 'center' }}>
+                    {p.method === 'Coupon' ? (
+                       <Text style={[styles.cellText, { color: COLORS.greyText }]} numberOfLines={1}>—</Text>
+                    ) : (
+                      <TouchableOpacity
+                        style={[styles.cellInput, { width: '100%', justifyContent: 'center', alignItems: 'center' }]}
+                        onPress={() => {
+                          setEditingPaymentIndex(idx);
+                          setShowDatePicker(true);
+                        }}
+                      >
+                        <Text style={{ color: COLORS.textDark, fontSize: 13 }} numberOfLines={1}>
+                          {p.date || new Date().toISOString().split('T')[0]}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                  <View style={{ width: 140, alignItems: 'center', flexDirection: 'row', gap: 5 }}>
+                    <TextInput
+                      style={[styles.cellInput, { flex: 1, color: COLORS.textDark, textAlign: 'center' }]}
+                      placeholder={p.method === 'Coupon' ? 'Code...' : 'Ref'}
+                      placeholderTextColor={COLORS.greyText}
+                      value={p.ref || ''}
+                      onChangeText={(val) => updatePayment(idx, 'ref', val)}
+                    />
+                    {p.method === 'Coupon' && (
+                       <TouchableOpacity
+                         style={[
+                           styles.validateBtn, 
+                           couponStatus[idx]?.valid ? { backgroundColor: COLORS.posGreen } : {}
+                         ]}
+                         onPress={() => handleValidateCoupon(idx, p.ref || '')}
+                       >
+                         {couponStatus[idx]?.loading ? (
+                            <ActivityIndicator size="small" color="white" />
+                         ) : couponStatus[idx]?.valid ? (
+                            <FontAwesome6 name="check" size={12} color="white" />
+                         ) : (
+                            <FontAwesome6 name="magnifying-glass" size={12} color="white" />
+                         )}
+                       </TouchableOpacity>
+                    )}
+                  </View>
+                  <View style={{ width: 120, alignItems: 'center' }}>
+                    <TextInput
+                      style={[styles.cellInput, { width: '100%', textAlign: 'center', color: COLORS.textDark }]}
+                      value={String(p.amount || '')}
+                      keyboardType="numeric"
+                      placeholder="0.00"
+                      placeholderTextColor={COLORS.greyText}
+                      editable={!(p.method === 'Coupon' && couponStatus[idx]?.valid)}
+                      onChangeText={(val) => updatePayment(idx, 'amount', Number(val) || 0)}
+                    />
+                  </View>
                   <TouchableOpacity style={{ width: 40, alignItems: 'center' }} onPress={() => removePayment(idx)}>
                     <FontAwesome6 name="circle-xmark" size={18} color={COLORS.posRed} />
                   </TouchableOpacity>
@@ -441,292 +459,5 @@ const EditSaleScreen: React.FC = () => {
     </ScrollView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: 'white',
-  },
-  loaderContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  loaderText: {
-    ...TYPOGRAPHY.montserrat.medium,
-    marginTop: 10,
-    color: COLORS.greyText,
-  },
-  header: {
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  backBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 15,
-  },
-  backText: {
-    ...TYPOGRAPHY.montserrat.medium,
-    fontSize: 16,
-    marginLeft: 10,
-    color: '#646464',
-  },
-  titleRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 5,
-  },
-  title: {
-    ...TYPOGRAPHY.montserrat.bold,
-    fontSize: 24,
-    color: COLORS.textDark,
-  },
-  customerName: {
-    ...TYPOGRAPHY.montserrat.bold,
-    fontSize: 20,
-    color: COLORS.textDark,
-  },
-  infoRow: {
-    alignItems: 'flex-end',
-  },
-  infoText: {
-    ...TYPOGRAPHY.montserrat.medium,
-    fontSize: 14,
-    color: COLORS.textDark,
-  },
-  content: {
-    padding: 20,
-    width: '100%',
-  },
-  tableBlock: {
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 8,
-    overflow: 'hidden',
-    width: '100%',
-  },
-  tableHeaderRow: {
-    flexDirection: 'row',
-    backgroundColor: COLORS.primary,
-    paddingVertical: 10,
-    paddingHorizontal: 15,
-    alignItems: 'center',
-    width: '100%',
-    gap: 10,
-  },
-  columnHeader: {
-    ...TYPOGRAPHY.montserrat.bold,
-    fontSize: 12,
-    color: 'white',
-  },
-  tableRow: {
-    flexDirection: 'row',
-    paddingVertical: 12,
-    paddingHorizontal: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-    alignItems: 'center',
-    backgroundColor: 'rgba(106, 27, 154, 0.05)',
-    width: '100%',
-    gap: 10,
-  },
-  returnRow: {
-    backgroundColor: 'white',
-  },
-  cellText: {
-    ...TYPOGRAPHY.montserrat.semiBold,
-    fontSize: 13,
-    color: '#4B5C69',
-  },
-  cellInput: {
-    borderWidth: 1,
-    borderColor: COLORS.primary,
-    borderRadius: 4,
-    paddingHorizontal: 5,
-    paddingVertical: 2,
-    fontSize: 13,
-    color: COLORS.textDark,
-  },
-  cellPicker: {
-    height: 48,
-    width: '100%',
-    color: '#000000',
-    backgroundColor: '#FFFFFF',
-  },
-  qtyControl: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 4,
-    paddingHorizontal: 5,
-    backgroundColor: 'white',
-  },
-  qtyText: {
-    ...TYPOGRAPHY.montserrat.bold,
-    fontSize: 13,
-    color: COLORS.greyText,
-    marginHorizontal: 8,
-  },
-  statusBadge: {
-    borderRadius: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-  },
-  statusBadgeText: {
-    ...TYPOGRAPHY.montserrat.bold,
-    fontSize: 10,
-    color: 'white',
-  },
-  searchRow: {
-    flexDirection: 'row',
-    padding: 10,
-    alignItems: 'center',
-  },
-  skuInput: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: COLORS.primary,
-    borderRadius: 4,
-    height: 36,
-    paddingHorizontal: 10,
-    ...TYPOGRAPHY.montserrat.medium,
-    fontSize: 12,
-    color: COLORS.textDark,
-  },
-  searchIconBtn: {
-    backgroundColor: COLORS.primary,
-    width: 36,
-    height: 36,
-    borderRadius: 4,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: 5,
-  },
-  totalsContainer: {
-    marginTop: 20,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 8,
-    overflow: 'hidden',
-  },
-  totalsHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    backgroundColor: COLORS.primary,
-    padding: 12,
-  },
-  totalsHeaderText: {
-    ...TYPOGRAPHY.montserrat.bold,
-    fontSize: 14,
-    color: 'white',
-  },
-  totalsBody: {
-    padding: 15,
-  },
-  totalRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  totalLabel: {
-    ...TYPOGRAPHY.montserrat.medium,
-    fontSize: 14,
-    color: COLORS.greyText,
-  },
-  totalValue: {
-    ...TYPOGRAPHY.montserrat.medium,
-    fontSize: 14,
-    color: COLORS.greyText,
-  },
-  adjustmentInput: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-    textAlign: 'right',
-    width: 100,
-    fontSize: 14,
-    color: COLORS.textDark,
-  },
-  notesSection: {
-    marginTop: 20,
-  },
-  sectionTitle: {
-    ...TYPOGRAPHY.montserrat.bold,
-    fontSize: 16,
-    color: COLORS.textDark,
-    marginBottom: 8,
-  },
-  notesInput: {
-    borderWidth: 1,
-    borderColor: COLORS.primary,
-    borderRadius: 8,
-    padding: 12,
-    height: 80,
-    textAlignVertical: 'top',
-    ...TYPOGRAPHY.montserrat.medium,
-    fontSize: 14,
-    color: COLORS.textDark,
-  },
-  footerActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 20,
-    gap: 10,
-  },
-  advanceBtn: {
-    backgroundColor: COLORS.posRed,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    flex: 1,
-    alignItems: 'center',
-  },
-  advanceBtnText: {
-    ...TYPOGRAPHY.montserrat.bold,
-    color: 'white',
-    fontSize: 14,
-  },
-  updateBtn: {
-    backgroundColor: COLORS.primary,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    flex: 1,
-    alignItems: 'center',
-  },
-  updateBtnText: {
-    ...TYPOGRAPHY.montserrat.bold,
-    color: 'white',
-    fontSize: 14,
-  },
-  transactionsHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 30,
-  },
-  methodButtonContainer: {
-    width: 160,
-    borderWidth: 1,
-    borderColor: COLORS.primary,
-    borderRadius: 8,
-    overflow: 'hidden',
-    backgroundColor: '#FFFFFF',
-    height: 48,
-    justifyContent: 'center',
-  },
-  methodPicker: {
-    height: 48,
-    width: '100%',
-    backgroundColor: '#FFFFFF',
-    color: '#000000',
-  },
-});
 
 export default EditSaleScreen;

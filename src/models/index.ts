@@ -40,9 +40,9 @@ export interface ProductModel {
   product_status: string;
   rack_no?: string;
   image?: string;
-  discount?: any;
-  alert_qty?: any;
-  alert_qty_warehouse?: any;
+  discount?: number | null;
+  alert_qty?: number | null;
+  alert_qty_warehouse?: number | null;
   expiry_date?: string;
   product_details?: string;
   has_variant: boolean;
@@ -77,12 +77,12 @@ export interface ProductModel {
   mfg_date?: string;
   made_in?: string;
   speed_limit?: string;
-  stores?: any;
-  productasset?: any;
+  stores?: Record<string, unknown>[];
+  productasset?: Record<string, unknown>[];
   hs_code?: string;
   count: {
     total: number;
-    [key: string]: any;
+    [key: string]: number | string | undefined | null;
   };
 }
 
@@ -188,7 +188,7 @@ export interface SoftwareSettings {
   tax_enabled: boolean;
   pos_screen_layout?: string;
   rounding?: 'no' | 'next' | 'floor';
-  [key: string]: any;
+  [key: string]: string | number | boolean | null | undefined;
 }
 
 export interface TicketData {
@@ -213,13 +213,13 @@ export interface TicketData {
 }
 
 export interface InvoiceData {
-  saleData: any;
-  saleItemsData: any[];
-  salesmanData: any;
-  cashierData: any;
-  customerData: any;
-  companyData: any;
-  settingsInvoiceFields: any;
+  saleData: Record<string, unknown>;
+  saleItemsData: Record<string, unknown>[];
+  salesmanData: Record<string, unknown>;
+  cashierData: Record<string, unknown>;
+  customerData: Record<string, unknown>;
+  companyData: Record<string, unknown>;
+  settingsInvoiceFields: Record<string, unknown>;
 }
 
 export interface CategoryModel {
@@ -277,16 +277,16 @@ export interface SaleHistoryItem {
   actual_bill: number;
 }
 
-export interface HoldSaleModel extends SaleHistoryItem {}
+export interface HoldSaleModel extends SaleHistoryItem { }
 
 export interface SaleDetails {
-  sale: any;
-  sale_items: any[];
-  customer: any;
-  user: any;
-  salesman?: any;
-  company?: any;
-  settings?: any;
+  sale: Record<string, unknown>;
+  sale_items: Record<string, unknown>[];
+  customer: Record<string, unknown>;
+  user: Record<string, unknown>;
+  salesman?: Record<string, unknown>;
+  company?: Record<string, unknown>;
+  settings?: Record<string, unknown>;
 }
 
 export interface KitchenProduct {

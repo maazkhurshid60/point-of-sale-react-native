@@ -11,8 +11,8 @@ import {
   Alert,
 } from 'react-native';
 import { FontAwesome6 } from '@expo/vector-icons';
-import { useSalesman } from '../../api/queries';
-import { useAuthStore } from '../../store/useAuthStore';
+import { useSalesman } from '../../api/shift/queries';
+import { useShiftStore } from '../../store/useShiftStore';
 import { COLORS } from '../../constants/colors';
 import { Salesman } from '../../models';
 
@@ -26,9 +26,9 @@ export default function SalesmanDialog({ onSelect, onClose }: SalesmanDialogProp
   const isPortrait = height > width;
 
   const { data: salesmen, isLoading } = useSalesman();
-  const currentShift = useAuthStore((state) => state.currentShift);
-  const selectedSalesman = useAuthStore((state) => state.selectedSalesman);
-  const updateSalesmanStore = useAuthStore((state) => state.updateSalesman);
+  const currentShift = useShiftStore((state) => state.currentShift);
+  const selectedSalesman = useShiftStore((state) => state.selectedSalesman);
+  const updateSalesmanStore = useShiftStore((state) => state.updateSalesman);
 
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -37,7 +37,7 @@ export default function SalesmanDialog({ onSelect, onClose }: SalesmanDialogProp
     if (salesmen && currentShift?.salesman_id && !selectedSalesman) {
       const found = salesmen.find(s => s.user_id === currentShift.salesman_id);
       if (found) {
-        useAuthStore.setState({ selectedSalesman: found });
+        useShiftStore.setState({ selectedSalesman: found });
       }
     }
   }, [salesmen, currentShift, selectedSalesman]);

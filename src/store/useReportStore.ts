@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import axiosClient from '../api/axiosClient';
 import { API_ENDPOINTS } from '../constants/apiEndpoints';
-import { useAuthStore } from './useAuthStore';
+import { useShiftStore } from './useShiftStore';
 
 export type ReportType = 
   | 'PRODUCT' 
@@ -159,7 +159,7 @@ export const useReportStore = create<ReportState>((set, get) => ({
   },
 
   fetchReportData: async (type) => {
-    const shiftId = useAuthStore.getState().currentShift?.shift_id;
+    const shiftId = useShiftStore.getState().currentShift?.shift_id;
     if (!shiftId) return;
 
     set((state) => ({ isLoading: { ...state.isLoading, [type]: true } }));

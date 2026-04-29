@@ -1,9 +1,9 @@
 import { create } from 'zustand';
-// import { persist, createJSONStorage } from 'zustand/middleware';
-// import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CategoryModel, ProductModel } from '../models';
 import axiosClient from '../api/axiosClient';
 import { API_ENDPOINTS } from '../constants/apiEndpoints';
+import { useAuthStore } from './useAuthStore';
+import { useShiftStore } from './useShiftStore';
 
 interface ProductState {
   listOfProducts: ProductModel[];
@@ -48,10 +48,10 @@ export const useProductStore = create<ProductState>((set, get) => ({
     set({ isLoading: true });
 
     try {
-      const authStore = (await import('./useAuthStore')).useAuthStore.getState();
-      if (!authStore.authToken || !authStore.isUserLoggedIn) return;
+      const authState = useAuthStore.getState();
+      if (!authState.authToken || !authState.isUserLoggedIn) return;
 
-      const storeId = authStore.currentStore?.store_id;
+      const storeId = useShiftStore.getState().currentStore?.store_id;
 
       const pageToFetch = pageNumber || (isLoadMore ? currentPage + 1 : 1);
 
@@ -86,8 +86,8 @@ export const useProductStore = create<ProductState>((set, get) => ({
   },
 
   fetchCategories: async () => {
-    const authStore = (await import('./useAuthStore')).useAuthStore.getState();
-    if (!authStore.authToken || !authStore.isUserLoggedIn) return;
+    const authState = useAuthStore.getState();
+    if (!authState.authToken || !authState.isUserLoggedIn) return;
 
     set({ isCategoriesLoading: true });
     try {

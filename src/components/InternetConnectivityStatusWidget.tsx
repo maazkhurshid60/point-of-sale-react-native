@@ -7,14 +7,13 @@ export default function InternetConnectivityStatusWidget() {
     const connectivityStatus = useNetworkStore((state) => state.connectivityStatus);
     const isInternetReachable = useNetworkStore((state) => state.isInternetReachable);
 
-    if (connectivityStatus === 'online' && isInternetReachable) {
-        return null;
-    }
+    const isOnline = connectivityStatus === 'online' && isInternetReachable !== false;
 
     return (
-        <View style={styles.container}>
+        <View style={[styles.container, isOnline ? styles.onlineContainer : styles.offlineContainer]}>
+            <View style={[styles.dot, isOnline ? styles.onlineDot : styles.offlineDot]} />
             <Text style={styles.text}>
-                {connectivityStatus === 'offline' ? 'No Connection' : 'Internet Unreachable'}
+                {isOnline ? 'Online' : 'Offline'}
             </Text>
         </View>
     );
@@ -25,9 +24,10 @@ const styles = StyleSheet.create({
         position: 'absolute',
         bottom: 20,
         right: 20,
-        backgroundColor: COLORS.posRed || '#B00020',
-        paddingHorizontal: 15,
-        paddingVertical: 8,
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
         borderRadius: 20,
         elevation: 5,
         shadowColor: '#000',
@@ -35,9 +35,28 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.25,
         shadowRadius: 3.84,
     },
+    onlineContainer: {
+        backgroundColor: 'rgba(76, 175, 80, 0.9)', // Soft green
+    },
+    offlineContainer: {
+        backgroundColor: 'rgba(244, 67, 54, 0.9)', // Soft red
+    },
+    dot: {
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        marginRight: 8,
+    },
+    onlineDot: {
+        backgroundColor: '#fff',
+    },
+    offlineDot: {
+        backgroundColor: '#fff',
+    },
     text: {
         color: 'white',
         fontSize: 12,
-        fontWeight: '600',
+        fontWeight: 'bold',
+        fontFamily: 'Montserrat',
     },
 });

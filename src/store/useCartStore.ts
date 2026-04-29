@@ -2,8 +2,11 @@ import { create } from "zustand";
 import type { ProductModel, CartItemModel, HoldSaleModel } from "../models";
 import axiosClient from "../api/axiosClient";
 import { API_ENDPOINTS } from "../constants/apiEndpoints";
-import { useAuthStore } from "./useAuthStore";
+import { useShiftStore } from "./useShiftStore";
+import { useAccountStore } from "./useAccountStore";
+import { useSettingsStore } from "./useSettingsStore";
 import { createAudioPlayer } from "expo-audio";
+import { Logger } from '../utils/logger';
 
 const cartAddItemPlayer = createAudioPlayer(require('../../assets/beep.wav'));
 
@@ -34,6 +37,8 @@ interface CartState {
   incrementQuantity: (productId: number) => void;
   decrementQuantity: (productId: number) => void;
   updateQuantity: (productId: number, quantity: number) => void;
+  bulkQtyIncrement: (quantity: string | number, product: ProductModel) => void;
+  applyDiscountOnASingleProductPrice: (cartItem: CartItemModel, discount: string | number) => void;
   applyOverallDiscount: (amount: number) => void;
   clearCart: () => void;
   setSelectedCustomer: (name: string, id: number) => void;
@@ -128,6 +133,48 @@ export const useCartStore = create<CartState>((set, get) => ({
     get().recalculate();
   },
 
+  bulkQtyIncrement: (quantity: string | number, product: ProductModel) => {
+    playAddToCartSound();
+    const numQty = typeof quantity === 'string' ? parseFloat(quantity) : quantity;
+    if (isNaN(numQty) || numQty <= 0) return;
+
+    const { cartItems } = get();
+    const existingItem = cartItems.find((item) => item.product_id === product.product_id);
+
+    if (existingItem) {
+      set({
+        cartItems: cartItems.map((item) =>
+          item.product_id === product.product_id
+            ? { ...item, quantity: item.quantity + numQty }
+            : item
+        ),
+      });
+    } else {
+      const newItem: CartItemModel = {
+        product_id: product.product_id,
+        product_name: product.product_name,
+        product: product,
+        quantity: numQty,
+        selling_price: product.selling_price,
+        discount: 0,
+      };
+      set({ cartItems: [...cartItems, newItem] });
+    }
+    get().recalculate();
+  },
+
+  applyDiscountOnASingleProductPrice: (cartItem: CartItemModel, discount: string | number) => {
+    const numDiscount = typeof discount === 'string' ? parseFloat(discount) : discount;
+    if (isNaN(numDiscount)) return;
+
+    set({
+      cartItems: get().cartItems.map((item) =>
+        item.product_id === cartItem.product_id ? { ...item, discount: numDiscount } : item
+      ),
+    });
+    get().recalculate();
+  },
+
   applyOverallDiscount: (amount: number) => {
     set({ discountAmount: amount });
     get().recalculate();
@@ -152,9 +199,11 @@ export const useCartStore = create<CartState>((set, get) => ({
 
   makeSale: async (type: string) => {
     const { cartItems, currentSaleId, discountAmount, selectedCustomerId } = get();
-    const auth = useAuthStore.getState();
-    const shiftId = auth.currentShift?.shift_id;
-    const storeId = auth.currentStore?.store_id;
+    const shiftStore = useShiftStore.getState();
+    const accountStore = useAccountStore.getState();
+    const settingsStore = useSettingsStore.getState();
+    const shiftId = shiftStore.currentShift?.shift_id;
+    const storeId = shiftStore.currentStore?.store_id;
 
     if (cartItems.length === 0) return null;
 
@@ -181,16 +230,16 @@ export const useCartStore = create<CartState>((set, get) => ({
       tax_rate: 0,
     }));
 
-    const cashId = auth.selectedCashAccount?.id || auth.selectedCashAccountId || 0;
-    const bankId = auth.selectedBankAccount?.id || auth.selectedBankAccountId || 0;
+    const cashId = accountStore.selectedCashAccount?.id || accountStore.selectedCashAccountId || 0;
+    const bankId = accountStore.selectedBankAccount?.id || accountStore.selectedBankAccountId || 0;
 
     const data = {
       shift_id: shiftId,
       store_id: storeId,
       customer_id: selectedCustomerId,
       products: products,
-      discount_type: auth.softwareSettings?.discount_type || 'amount',
-      discount_policy: auth.softwareSettings?.discount_policy || 'overall', // Added
+      discount_type: settingsStore.softwareSettings?.discount_type || 'amount',
+      discount_policy: settingsStore.softwareSettings?.discount_policy || 'overall', // Added
       overall_discount: discountAmount,
       total_discount: discountAmount,   // Some endpoints use total_discount
       discount_amount: discountAmount,  // DataController.php line 95 expects this key
@@ -237,7 +286,7 @@ export const useCartStore = create<CartState>((set, get) => ({
       notes: '',
     };
 
-    console.log(`[makeSale] Attempting ${type} sale with expanded payload:`, JSON.stringify(data));
+    Logger.debugPayload(`makeSale Attempting ${type} sale with expanded payload`, data);
 
     try {
       let endpoint = API_ENDPOINTS.POS.CHECKOUT;
@@ -261,7 +310,7 @@ export const useCartStore = create<CartState>((set, get) => ({
         }
       });
 
-      console.log(`[makeSale] API Response for ${type}:`, JSON.stringify(res.data));
+      Logger.debugPayload(`makeSale API Response for ${type}`, res.data);
 
       if (res.data?.success || res.data?.status === 'success' || res.data?.status === 'successfully') {
         const result = res.data.result || res.data.data;
@@ -277,7 +326,7 @@ export const useCartStore = create<CartState>((set, get) => ({
   },
 
   fetchHoldSales: async (url) => {
-    const storeId = useAuthStore.getState().currentStore?.store_id;
+    const storeId = useShiftStore.getState().currentStore?.store_id;
     const fetchUrl = url || `${API_ENDPOINTS.CATALOG.DRAFT_SALES_LIST}?page=1`;
     try {
       const res = await axiosClient.get(fetchUrl, {
@@ -297,8 +346,7 @@ export const useCartStore = create<CartState>((set, get) => ({
 
   holdCurrentSale: async () => {
     const { cartItems, discountAmount, currentSaleId } = get();
-    const auth = useAuthStore.getState();
-    const shiftId = auth.currentShift?.shift_id;
+    const shiftId = useShiftStore.getState().currentShift?.shift_id;
     const customerId = 1; // Default customer if none selected
 
     if (cartItems.length === 0) return false;

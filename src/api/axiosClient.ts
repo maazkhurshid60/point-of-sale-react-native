@@ -30,6 +30,8 @@ axiosClient.interceptors.request.use(
     if (baseURL) {
       config.baseURL = baseURL;
     }
+    
+    console.log(`[Axios Request] ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`);
 
     const token = state.authToken;
     if (token) {

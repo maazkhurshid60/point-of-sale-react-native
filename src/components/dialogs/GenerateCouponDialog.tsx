@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, useWindowDimensions, TextInput, ActivityIndicator } from 'react-native';
 import { COLORS } from '../../constants/colors';
-import { useAuthStore } from '../../store/useAuthStore';
+import { useAccountStore } from '../../store/useAccountStore';
 
 interface GenerateCouponDialogProps {
   onClose?: () => void;
@@ -14,8 +14,8 @@ export default function GenerateCouponDialog({ onClose }: GenerateCouponDialogPr
   const [isLoading, setIsLoading] = React.useState(false);
   const [couponData, setCouponData] = React.useState<any>(null);
 
-  const generateCoupon = useAuthStore(state => state.generateCoupon);
-  const validateCoupon = useAuthStore(state => state.validateCoupon);
+  const generateCoupon = useAccountStore(state => state.generateCoupon);
+  const validateCoupon = useAccountStore(state => state.validateCoupon);
 
   const isTablet = width >= 768;
   const dialogWidth = isTablet ? 600 : width * 0.9;

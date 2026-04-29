@@ -8,7 +8,7 @@ import {
     useWindowDimensions,
     Keyboard,
 } from 'react-native';
-import { useAuthStore } from '../../store/useAuthStore';
+import { useSettingsStore } from '../../store/useSettingsStore';
 import { useCartStore } from '../../store/useCartStore';
 import { COLORS } from '../../constants/colors';
 import { CartItemModel } from '../../models';
@@ -22,7 +22,7 @@ export default function AddDiscountDialog({ cartItem, onClose }: AddDiscountDial
     const { width, height } = useWindowDimensions();
     const isPortrait = height > width;
 
-    const softwareSettings = useAuthStore((state) => state.softwareSettings);
+    const softwareSettings = useSettingsStore((state) => state.softwareSettings);
     const applyDiscountOnASingleProductPrice = useCartStore((state) => state.applyDiscountOnASingleProductPrice);
 
     const [discountValue, setDiscountValue] = useState('');

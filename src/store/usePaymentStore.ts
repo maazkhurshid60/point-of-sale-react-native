@@ -2,8 +2,11 @@ import { create } from 'zustand';
 import { PaymentMethod } from '../models';
 import axiosClient from '../api/axiosClient';
 import { API_ENDPOINTS } from '../constants/apiEndpoints';
-import { useAuthStore } from './useAuthStore';
+import { useShiftStore } from './useShiftStore';
+import { useAccountStore } from './useAccountStore';
+import { useSettingsStore } from './useSettingsStore';
 import { useCartStore } from './useCartStore';
+import { Logger } from '../utils/logger';
 
 interface PaymentState {
   totalBill: number;
@@ -210,11 +213,13 @@ export const usePaymentStore = create<PaymentState>((set, get) => ({
   },
 
   makePaymentSale: async (type: string) => {
-    const authStore = useAuthStore.getState();
+    const shiftStore = useShiftStore.getState();
+    const accountStore = useAccountStore.getState();
+    const settingsStore = useSettingsStore.getState();
     const cartStore = useCartStore.getState();
 
-    const shiftId = authStore.currentShift?.shift_id;
-    const storeId = authStore.currentStore?.store_id;
+    const shiftId = shiftStore.currentShift?.shift_id;
+    const storeId = shiftStore.currentStore?.store_id;
     const customerId = cartStore.selectedCustomerId;
     const customerName = cartStore.selectedCustomer;
 
@@ -239,8 +244,8 @@ export const usePaymentStore = create<PaymentState>((set, get) => ({
     }
 
     // Default cash ID fallback
-    const fallbackAccountId = authStore.selectedCashAccount?.id || authStore.selectedCashAccountId || 0;
-    const bankAccountId = authStore.selectedBankAccount?.id || authStore.selectedBankAccountId || 0;
+    const fallbackAccountId = accountStore.selectedCashAccount?.id || accountStore.selectedCashAccountId || 0;
+    const bankAccountId = accountStore.selectedBankAccount?.id || accountStore.selectedBankAccountId || 0;
 
     const products = cartStore.cartItems.map((item) => ({
       product_id: item.product_id,
@@ -284,8 +289,8 @@ export const usePaymentStore = create<PaymentState>((set, get) => ({
       store_id: storeId,
       customer_id: customerId,
       products: products,
-      discount_type: authStore.softwareSettings?.discount_type || 'amount',
-      discount_policy: authStore.softwareSettings?.discount_policy || 'overall',
+      discount_type: settingsStore.softwareSettings?.discount_type || 'amount',
+      discount_policy: settingsStore.softwareSettings?.discount_policy || 'overall',
       overall_discount: cartStore.discountAmount,
       total_discount: cartStore.discountAmount,
       discount_amount: cartStore.discountAmount,
@@ -330,8 +335,8 @@ export const usePaymentStore = create<PaymentState>((set, get) => ({
     console.log(`[makePaymentSale] type: ${type}`);
     console.log(`[makePaymentSale] shiftId: ${shiftId}, storeId: ${storeId}, customerId: ${customerId}`);
     console.log(`[makePaymentSale] fallbackAccountId: ${fallbackAccountId}, bankAccountId: ${bankAccountId}`);
-    console.log(`[makePaymentSale] payments:`, JSON.stringify(formattedPayments));
-    console.log(`[makePaymentSale] data:`, JSON.stringify(data));
+    Logger.debugPayload('makePaymentSale payments', formattedPayments);
+    Logger.debugPayload('makePaymentSale payload data', data);
 
     try {
       let endpoint = API_ENDPOINTS.POS.CHECKOUT;
@@ -355,7 +360,7 @@ export const usePaymentStore = create<PaymentState>((set, get) => ({
 
       console.log(`[makePaymentSale] === RESPONSE ===`);
       console.log(`[makePaymentSale] status: ${res.status}`);
-      console.log(`[makePaymentSale] data:`, JSON.stringify(res.data));
+      Logger.debugPayload('makePaymentSale API Response', res.data);
 
       if (res.data?.success || res.data?.status === 'success' || res.data?.status === 'successfully') {
         const result = res.data.result || res.data.data;

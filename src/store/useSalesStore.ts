@@ -1,7 +1,9 @@
 import { create } from 'zustand';
 import axiosClient from '../api/axiosClient';
 import { API_ENDPOINTS } from '../constants/apiEndpoints';
-import { useAuthStore } from './useAuthStore';
+import { useShiftStore } from './useShiftStore';
+import { useAccountStore } from './useAccountStore';
+import { useSettingsStore } from './useSettingsStore';
 import { formatSaleResponseToSlipData } from '../utils/invoiceMapping';
 
 export interface Sale {
@@ -122,7 +124,7 @@ export const useSalesStore = create<SalesState>((set, get) => ({
     set({ isLoading: true });
     try {
       const { filters } = get();
-      const currentShift = useAuthStore.getState().currentShift;
+      const currentShift = useShiftStore.getState().currentShift;
 
       const response = await axiosClient.get(API_ENDPOINTS.CATALOG.SALESLIST, {
         params: {
@@ -304,10 +306,10 @@ export const useSalesStore = create<SalesState>((set, get) => ({
 
   makeReturnSale: async (saleId: number) => {
     const { returnProductsList, paymentsList, currentlySelectedSale, totalBill, totalDiscount, notes, newAdjustment } = get();
-    const authStore = useAuthStore.getState();
-    const currentShift = authStore.currentShift;
+    const shiftStore = useShiftStore.getState();
+    const currentShift = shiftStore.currentShift;
 
-    const discountPolicy = authStore.softwareSettings?.discount_policy || 'overall';
+    const discountPolicy = useSettingsStore.getState().softwareSettings?.discount_policy || 'overall';
     let discount = 0;
     if (discountPolicy === 'overall') {
       const totalForDiscount = totalBill + totalDiscount;
@@ -344,6 +346,8 @@ export const useSalesStore = create<SalesState>((set, get) => ({
       notes: notes,
       adjustment: newAdjustment,
       shift_id: currentShift?.shift_id,
+      discount_amount: totalDiscount || 0,
+      total_discount: totalDiscount || 0,
     };
 
     try {
@@ -387,13 +391,13 @@ export const useSalesStore = create<SalesState>((set, get) => ({
 
   addPaymentMethod: (amount: number, method: string) => {
     const { paymentsList } = get();
-    const authStore = useAuthStore.getState();
+    const accountStore = useAccountStore.getState();
 
     let accountId = null;
     if (method === 'Cash') {
-      accountId = authStore.selectedCashAccountId;
-    } else if (method === 'Bank' && authStore.bankAccounts.length > 0) {
-      accountId = authStore.bankAccounts[0].id;
+      accountId = accountStore.selectedCashAccountId;
+    } else if (method === 'Bank' && accountStore.bankAccounts.length > 0) {
+      accountId = accountStore.bankAccounts[0].id;
     }
 
     const newPayment = {

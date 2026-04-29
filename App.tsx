@@ -6,10 +6,14 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as ScreenOrientation from 'expo-screen-orientation';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import RootNavigator from './src/navigation/RootNavigator';
+import { useNetworkListener } from './src/hooks/useNetworkListener';
+import InternetConnectivityStatusWidget from './src/components/InternetConnectivityStatusWidget';
 
 const queryClient = new QueryClient();
 
 export default function App() {
+  useNetworkListener();
+
   useEffect(() => {
     async function lockOrientation() {
       try {
@@ -29,6 +33,7 @@ export default function App() {
             <NavigationContainer>
               <RootNavigator />
             </NavigationContainer>
+            <InternetConnectivityStatusWidget />
           </View>
         </QueryClientProvider>
       </SafeAreaProvider>
