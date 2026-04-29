@@ -11,69 +11,83 @@ export const formatSaleResponseToSlipData = (result: any) => {
   const authState = useAuthStore.getState();
   const shiftState = useShiftStore.getState();
 
-  const saleDataRaw = Array.isArray(result.sale) ? result.sale[0] : (result.sale || result.quotation || result.cashSaleData?.sale || result.saleData || result);
+  const saleDataRaw = Array.isArray(result.sale) ? result.sale[0] : (
+    result.sale || 
+    result.quotation || 
+    result.sample || 
+    result.cashSaleData?.sale || 
+    result.saleData || 
+    result.draft || 
+    result
+  );
   
   // Normalize numeric fields in saleData
   const saleData = {
     ...saleDataRaw,
-    actual_bill: saleDataRaw?.actual_bill || saleDataRaw?.subtotal || 0,
+    actual_bill: saleDataRaw?.actual_bill || saleDataRaw?.subtotal || saleDataRaw?.total_bill || 0,
     total_tax: saleDataRaw?.total_tax || saleDataRaw?.tax || 0,
     total_bill: saleDataRaw?.total_bill || saleDataRaw?.total || saleDataRaw?.amount || 0,
+    invoice_no: saleDataRaw?.invoice_no || saleDataRaw?.id?.toString() || 'N/A',
   };
 
   // 2. Items List
   const itemsRaw = result.sale_items || 
-    result.saleItemsData ||
-    result.sale_details || 
+    result.sale_details ||
     result.products || 
     result.items || 
+    result.sale?.sale_items ||
+    result.sale?.sale_details ||
+    result.sale?.products ||
     saleDataRaw?.sale_items || 
     saleDataRaw?.sale_details || 
+    saleDataRaw?.products ||
     result.cashSaleData?.sale?.sale_items ||
     [];
 
   const saleItemsData = Array.isArray(itemsRaw) ? itemsRaw.map((item: any) => ({
     ...item,
-    sku: item.sku || item.product?.sku || '',
-    product_name: item.product_name || item.name || item.product?.product_name || item.product?.name || '',
-    name: item.name || item.product_name || item.product?.name || item.product?.product_name || '',
+    sku: item.sku || item.product?.sku || item.product_sku || item.item_code || '',
+    product_name: item.product_name || item.name || item.item_name || item.product?.product_name || item.product?.name || '',
+    name: item.name || item.product_name || item.item_name || item.product?.name || item.product?.product_name || '',
+    qty: item.qty || item.quantity || 1,
+    quantity: item.qty || item.quantity || 1,
     price: item.price || item.selling_price || item.product?.selling_price || 0,
     subtotal: item.subtotal || item.total || 0,
   })) : [];
 
   // 3. Customer Mapping
-  const customerData = result.customerData || 
-    result.customer || 
-    result.customer_details || 
-    result.cashSaleData?.customer || 
-    saleData?.customer || 
+  const customerData = result.customerData ||
+    result.customer ||
+    result.customer_details ||
+    result.cashSaleData?.customer ||
+    saleData?.customer ||
     { name: result.usersData?.customer_name || 'Walk-in-customer' };
 
   // 4. Company Mapping
-  const companyData = result.companyData || 
-    result.company || 
-    result.business || 
+  const companyData = result.companyData ||
+    result.company ||
+    result.business ||
     result.lead ||
-    result.cashSaleData?.company || 
-    shiftState.currentStore || 
+    result.cashSaleData?.company ||
+    shiftState.currentStore ||
     {};
 
   // 5. Salesman Mapping
-  const salesmanData = result.salesmanData || 
-    result.salesman || 
-    result.sales_man || 
-    result.sale_person || 
-    result.cashSaleData?.salesman || 
-    saleData?.salesman || 
+  const salesmanData = result.salesmanData ||
+    result.salesman ||
+    result.sales_man ||
+    result.sale_person ||
+    result.cashSaleData?.salesman ||
+    saleData?.salesman ||
     { name: result.usersData?.salesman_name || '' };
 
   // 6. Cashier Mapping
-  const cashierData = result.cashierData || 
-    result.cashier || 
-    result.user || 
-    saleData?.user || 
-    result.cashSaleData?.cashier || 
-    authState.currentUser || 
+  const cashierData = result.cashierData ||
+    result.cashier ||
+    result.user ||
+    saleData?.user ||
+    result.cashSaleData?.cashier ||
+    authState.currentUser ||
     { name: result.usersData?.sale_person || 'N/A' };
 
   // 7. Metadata (usersData)

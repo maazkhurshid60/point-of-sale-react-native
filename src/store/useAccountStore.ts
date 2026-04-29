@@ -156,7 +156,22 @@ export const useAccountStore = create<AccountState>((set, get) => ({
           default_card_account: cardId,
         },
       });
-      return res.data?.success || false;
+      
+      if (res.data?.success) {
+        // Sync local state so POS/Payment screens reflect changes immediately
+        const cashAcc = get().cashAccounts.find(a => a.id === Number(cashId)) || null;
+        const bankAcc = get().bankAccounts.find(a => a.id === Number(bankId)) || null;
+        
+        set({
+          selectedCashAccountId: Number(cashId),
+          selectedCashAccount: cashAcc,
+          selectedBankAccountId: Number(bankId),
+          selectedBankAccount: bankAcc,
+          selectedCreditCardAccountId: Number(cardId),
+        });
+        return true;
+      }
+      return false;
     } catch (e) {
       console.error(e);
       return false;

@@ -9,6 +9,8 @@ interface RestaurantState {
   listOfTables: TableModel[];
   listofdecorations: DecorationModel[];
   lastResponseKeys: string | null;
+  // IDs of floors that were deleted locally but not yet synced with the server
+  deletedFloorIds: number[];
 
   // Floor Actions
   setCurrentFloor: (floor: FloorModel) => void;
@@ -47,6 +49,7 @@ export const useRestaurantStore = create<RestaurantState>((set, get) => ({
   listOfTables: [],
   listofdecorations: [],
   lastResponseKeys: null,
+  deletedFloorIds: [],
 
   // ─── Floor Actions ──────────────────────────────────────────────────────────
   setCurrentFloor: (floor) => set({ currentFloor: floor }),
@@ -65,15 +68,20 @@ export const useRestaurantStore = create<RestaurantState>((set, get) => ({
   },
 
   removeFloor: () => {
-    const { listOfFloors, currentFloor, listOfTables, listofdecorations } = get();
-    if (!currentFloor || listOfFloors.length <= 1) return;
+    const { listOfFloors, currentFloor, listOfTables, listofdecorations, deletedFloorIds } = get();
+    if (!currentFloor) return;
     const targetId = currentFloor.floorId;
     const newList = listOfFloors.filter((f) => f.floorId !== targetId);
+    // Only track real server IDs (not temporary local IDs > 1_000_000_000)
+    const newDeletedIds = targetId < 1_000_000_000
+      ? [...deletedFloorIds, targetId]
+      : deletedFloorIds;
     set({
       listOfFloors: newList,
-      currentFloor: newList[0],
+      currentFloor: newList.length > 0 ? newList[0] : null,
       listOfTables: listOfTables.filter((t) => t.floorid !== targetId),
       listofdecorations: listofdecorations.filter((d) => d.floor !== targetId),
+      deletedFloorIds: newDeletedIds,
     });
   },
 
@@ -294,7 +302,8 @@ export const useRestaurantStore = create<RestaurantState>((set, get) => ({
 
         const mappedTables: TableModel[] = resTables.map((t: any) => ({
           tableId: Number(t.id || 0),
-          tableName: t.name,
+          // Coerce to string to prevent null/undefined crashing <Text> components
+          tableName: String(t.name || `Table ${t.id || '?'}`),
           floorid: Number(t.floor_id || source.id || id || 0),
           x: Number(t.x_axis || 0),
           y: Number(t.y_axis || 0),
@@ -308,8 +317,8 @@ export const useRestaurantStore = create<RestaurantState>((set, get) => ({
               return typeof t.list_of_chairs === "string"
                 ? JSON.parse(t.list_of_chairs)
                 : Array.isArray(t.list_of_chairs)
-                ? t.list_of_chairs
-                : [0, 0, 0, 0];
+                  ? t.list_of_chairs
+                  : [0, 0, 0, 0];
             } catch {
               return [0, 0, 0, 0];
             }
@@ -320,7 +329,8 @@ export const useRestaurantStore = create<RestaurantState>((set, get) => ({
         const mappedDecorations: DecorationModel[] = resDecorations.map((d: any) => ({
           id: Number(d.id || 0),
           floor: Number(d.floor_id || source.id || id || 0),
-          title: d.name,
+          // Coerce to string to prevent null/undefined crashing <Text> components
+          title: String(d.name || 'Decoration'),
           x: Number(d.x_axis || 0),
           y: Number(d.y_axis || 0),
           width: 35,
@@ -347,108 +357,149 @@ export const useRestaurantStore = create<RestaurantState>((set, get) => ({
   saveFloorLayout: async () => {
     try {
       const state = get();
-      const decoPayload = state.listofdecorations
-        .filter((d) => state.listOfFloors.some((f) => f.floorId === d.floor))
-        .map((d) => ({
-          id: d.id > 1000000000 ? 0 : d.id,
-          floor_id: d.floor > 1000000000 ? 0 : d.floor,
-          name: d.title,
-          x_axis: d.x.toString(),
-          y_axis: d.y.toString(),
-          remarks: "",
-        }));
 
-      // Optimization: If we have new floors (temporary IDs > 1000000000), 
-      // we must save floors first to get real IDs before we can link tables.
-      const hasNewFloors = state.listOfFloors.some(f => f.floorId > 1000000000);
-      
-      const payload: any = {
+      // ─── PHASE 1: Save floors only ───────────────────────────────────────────
+      // We always save floors first so the backend commits them before we
+      // reference their IDs in tables/decorations. This prevents the FK
+      // constraint violation caused by the backend processing tables before
+      // floors are fully inserted/committed.
+      const floorsOnlyPayload = {
         floors: state.listOfFloors.map((f) => ({
-          id: f.floorId > 1000000000 ? 0 : f.floorId,
+          id: f.floorId > 1_000_000_000 ? 0 : f.floorId,
           name: f.floorName,
           floor_no: f.floorNo,
           tables_capacity: (f.noOfTable || 10).toString(),
           store_id: f.storeid || 1,
           remarks: "",
         })),
+        // Empty arrays signal the backend to keep existing records unchanged
+        tables: [],
+        decorations: [],
+        decroation: [],
       };
 
-      // Only include tables and decorations if we don't have new floors, 
-      // OR if the server can handle 0 mapping (which it currently can't).
-      if (!hasNewFloors) {
-        payload.tables = state.listOfTables
-          .filter((t) => state.listOfFloors.some((f) => f.floorId === t.floorid))
-          .map((t) => ({
-            id: t.tableId > 1000000000 ? 0 : t.tableId,
-            floor_id: t.floorid, // Use real ID
-            name: t.tableName,
-            table_chairs: (t.chairsCount || 0).toString(),
-            x_axis: t.x.toString(),
-            y_axis: t.y.toString(),
-            height: Math.round(t.height || 80).toString(),
-            width: Math.round(t.width || 80).toString(),
-            is_round: t.isRounded ? 1 : 0,
-            rotation: t.rotation.toString(),
-            list_of_chairs: t.listofChairs,
-            status: 1,
-            remarks: "",
-          }));
-        
-        payload.decorations = decoPayload;
-        payload.decroation = decoPayload;
+      const phase1Res = await axiosClient.post(API_ENDPOINTS.RESTAURANT.UPDATE_FLOOR, floorsOnlyPayload);
+
+      if (!phase1Res.data?.success) {
+        const errMsg =
+          phase1Res.data?.message ||
+          phase1Res.data?.error ||
+          (phase1Res.data?.errors
+            ? Object.values(phase1Res.data.errors).flat().join(", ")
+            : "Failed to save floors");
+        return { success: false, message: errMsg };
       }
 
-      const res = await axiosClient.post(API_ENDPOINTS.RESTAURANT.UPDATE_FLOOR, payload);
-
-      if (res.data?.success) {
-        const data = res.data;
-        const rawFloor = data.floor;
-        const resFloors: any[] = Array.isArray(data.floors)
-          ? data.floors
-          : rawFloor
+      // ─── Map server-returned floor IDs ───────────────────────────────────────
+      // The backend returns the committed floor records with real IDs.
+      const phase1Data = phase1Res.data;
+      const rawFloor = phase1Data.floor;
+      const resFloors: any[] = Array.isArray(phase1Data.floors)
+        ? phase1Data.floors
+        : rawFloor
           ? Array.isArray(rawFloor) ? rawFloor : [rawFloor]
           : [];
 
-        const mappedFloors: FloorModel[] = resFloors.map((f: any) => ({
-          floorId: Number(f.id || 0),
-          floorName: f.name || "",
-          floorNo: String(f.floor_no || ""),
-          noOfTable: Number(f.tables_capacity || 0),
-          storeid: Number(f.store_id || 0),
+      // Build a map from our local floorNo -> server floorId
+      const serverFloors: FloorModel[] = resFloors.map((f: any) => ({
+        floorId: Number(f.id || 0),
+        floorName: String(f.name || ""),
+        floorNo: String(f.floor_no || ""),
+        noOfTable: Number(f.tables_capacity || 0),
+        storeid: Number(f.store_id || 0),
+      }));
+
+      // Use server list if returned, otherwise keep local list (no change scenario)
+      const confirmedFloors = serverFloors.length > 0 ? serverFloors : state.listOfFloors;
+
+      // Map local floor IDs to server-confirmed IDs for tables and decorations
+      const resolveFloorId = (localFloorId: number): number => {
+        const localFloor = state.listOfFloors.find(f => f.floorId === localFloorId);
+        if (!localFloor) return localFloorId;
+        const matched = confirmedFloors.find(f => f.floorNo === localFloor.floorNo);
+        return matched ? matched.floorId : localFloorId;
+      };
+
+      // ─── PHASE 2: Save tables and decorations ────────────────────────────────
+      // Now that floors are confirmed in the DB, we can safely reference their IDs.
+      const tablesPayload = state.listOfTables
+        .filter((t) => confirmedFloors.some((f) => f.floorNo === state.listOfFloors.find(lf => lf.floorId === t.floorid)?.floorNo))
+        .map((t) => ({
+          id: t.tableId > 1_000_000_000 ? 0 : t.tableId,
+          floor_id: resolveFloorId(t.floorid), // Always a committed server ID
+          name: t.tableName,
+          table_chairs: (t.chairsCount || 0).toString(),
+          x_axis: t.x.toString(),
+          y_axis: t.y.toString(),
+          height: Math.round(t.height || 80).toString(),
+          width: Math.round(t.width || 80).toString(),
+          is_round: t.isRounded ? 1 : 0,
+          rotation: t.rotation.toString(),
+          list_of_chairs: t.listofChairs,
+          status: 1,
+          remarks: "",
         }));
 
-        const newList = mappedFloors.length > 0 ? mappedFloors : state.listOfFloors;
-        
-        // Map old temporary IDs to new server IDs for tables and decorations
-        const updatedTables = state.listOfTables.map(table => {
-          const matchedFloor = newList.find(f => f.floorNo === state.listOfFloors.find(oldF => oldF.floorId === table.floorid)?.floorNo);
-          return matchedFloor ? { ...table, floorid: matchedFloor.floorId } : table;
-        });
+      const decoPayload = state.listofdecorations
+        .filter((d) => confirmedFloors.some((f) => f.floorNo === state.listOfFloors.find(lf => lf.floorId === d.floor)?.floorNo))
+        .map((d) => ({
+          id: d.id > 1_000_000_000 ? 0 : d.id,
+          floor_id: resolveFloorId(d.floor), // Always a committed server ID
+          name: d.title,
+          x_axis: d.x.toString(),
+          y_axis: d.y.toString(),
+          remarks: "",
+        }));
 
-        const updatedDecos = state.listofdecorations.map(deco => {
-          const matchedFloor = newList.find(f => f.floorNo === state.listOfFloors.find(oldF => oldF.floorId === deco.floor)?.floorNo);
-          return matchedFloor ? { ...deco, floor: matchedFloor.floorId } : deco;
-        });
+      const fullPayload = {
+        floors: confirmedFloors.map((f) => ({
+          id: f.floorId,
+          name: f.floorName,
+          floor_no: f.floorNo,
+          tables_capacity: (f.noOfTable || 10).toString(),
+          store_id: f.storeid || 1,
+          remarks: "",
+        })),
+        tables: tablesPayload,
+        decorations: decoPayload,
+        decroation: decoPayload,
+      };
 
-        set({ 
-          listOfFloors: newList,
+      const phase2Res = await axiosClient.post(API_ENDPOINTS.RESTAURANT.UPDATE_FLOOR, fullPayload);
+
+      // ─── Update local state with confirmed server data ────────────────────────
+      if (phase2Res.data?.success) {
+        const updatedTables = state.listOfTables.map(table => ({
+          ...table,
+          floorid: resolveFloorId(table.floorid),
+        }));
+        const updatedDecos = state.listofdecorations.map(deco => ({
+          ...deco,
+          floor: resolveFloorId(deco.floor),
+        }));
+
+        set({
+          listOfFloors: confirmedFloors,
           listOfTables: updatedTables,
-          listofdecorations: updatedDecos
+          listofdecorations: updatedDecos,
+          deletedFloorIds: [], // Clear pending deletions — synced
         });
 
         if (state.currentFloor) {
-          const updatedCurrent = newList.find((f) => f.floorNo === state.currentFloor?.floorNo);
+          const updatedCurrent = confirmedFloors.find(
+            (f) => f.floorNo === state.currentFloor?.floorNo
+          );
           if (updatedCurrent) set({ currentFloor: updatedCurrent });
         }
       }
 
       return {
-        success: !!res.data?.success,
+        success: !!phase2Res.data?.success,
         message:
-          res.data?.message ||
-          res.data?.error ||
-          (res.data?.errors
-            ? Object.values(res.data.errors).flat().join(", ")
+          phase2Res.data?.message ||
+          phase2Res.data?.error ||
+          (phase2Res.data?.errors
+            ? Object.values(phase2Res.data.errors).flat().join(", ")
             : "Unknown server error"),
       };
     } catch (e: any) {

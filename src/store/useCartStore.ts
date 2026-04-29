@@ -5,6 +5,7 @@ import { API_ENDPOINTS } from "../constants/apiEndpoints";
 import { useShiftStore } from "./useShiftStore";
 import { useAccountStore } from "./useAccountStore";
 import { useSettingsStore } from "./useSettingsStore";
+import { useDialogStore } from "./useDialogStore";
 import { createAudioPlayer } from "expo-audio";
 import { Logger } from '../utils/logger';
 
@@ -244,8 +245,9 @@ export const useCartStore = create<CartState>((set, get) => ({
       total_discount: discountAmount,   // Some endpoints use total_discount
       discount_amount: discountAmount,  // DataController.php line 95 expects this key
       type: 'payment_checkout',
-      draft_enabled: currentSaleId ? 1 : null,
+      draft_enabled: 0, // Set to 0 to tell server this is a FINAL sale, not a draft anymore
       draft_id: currentSaleId,
+      draft_sale_id: currentSaleId, // Added for backend compatibility when recalling sales
 
       // Shotgun approach for account IDs to satisfy different controller requirements
       account_id: cashId,
@@ -311,15 +313,25 @@ export const useCartStore = create<CartState>((set, get) => ({
       });
 
       Logger.debugPayload(`makeSale API Response for ${type}`, res.data);
+      if (type === 'print-sample') {
+        console.log("DEBUG: Sample Sale Response Type:", typeof res.data);
+        console.log("DEBUG: Sample Sale Response Body:", JSON.stringify(res.data).substring(0, 500));
+      }
 
       if (res.data?.success || res.data?.status === 'success' || res.data?.status === 'successfully') {
         const result = res.data.result || res.data.data;
         get().clearCart();
         return result;
       } else {
-        console.warn(`[makeSale] Server returned non-success for ${type}:`, res.data?.message || 'Unknown error');
+        const errorMessage = res.data?.message || 'Server returned an unsuccessful response.';
+        useDialogStore.getState().showDialog('ERROR', { errorMessage });
+        console.warn(`[makeSale] Server returned non-success for ${type}:`, errorMessage);
       }
     } catch (e: any) {
+      const serverError = e.response?.data?.message || e.message;
+      useDialogStore.getState().showDialog('ERROR', { 
+        errorMessage: `Transaction Failed: ${serverError}` 
+      });
       console.error(`[makeSale] Failed to make ${type} sale. Error:`, e.response?.data || e.message);
     }
     return null;
@@ -345,7 +357,7 @@ export const useCartStore = create<CartState>((set, get) => ({
   },
 
   holdCurrentSale: async () => {
-    const { cartItems, discountAmount, currentSaleId } = get();
+    const { cartItems, subtotal, taxAmount, totalToPay, discountAmount, currentSaleId } = get();
     const shiftId = useShiftStore.getState().currentShift?.shift_id;
     const customerId = 1; // Default customer if none selected
 
@@ -353,17 +365,36 @@ export const useCartStore = create<CartState>((set, get) => ({
 
     const products = cartItems.map(item => ({
       product_id: item.product_id,
+      name: item.product_name,
+      full_name: item.product_name,
       qty: item.quantity,
+      selling_price: item.selling_price,
       price: item.selling_price,
+      subtotal: item.selling_price * item.quantity,
       discount: item.discount || 0,
-      total: item.selling_price * item.quantity
+      discount_amount: item.discount || 0,
+      total: item.selling_price * item.quantity,
+      comments: 'N/A',
+      enable_comments: 0,
+      note: '',
+      notes: '',
+      serial_number: '',
+      expiry_date: null,
+      warehouse_id: null,
+      tax: 0,
+      tax_amount: 0,
+      tax_rate: 0,
     }));
 
     const data = {
       shift_id: shiftId,
       customer_id: customerId,
       products: products,
-      discount_type: 'amount', // default
+      subtotal: subtotal,
+      tax_amount: taxAmount,
+      discount_amount: discountAmount,
+      total: totalToPay,
+      discount_type: 'amount',
       overall_discount: discountAmount,
       draft_enabled: 1,
       draft_id: currentSaleId
@@ -371,11 +402,26 @@ export const useCartStore = create<CartState>((set, get) => ({
 
     try {
       const res = await axiosClient.post(API_ENDPOINTS.POS.DRAFT_SALE, data);
-      if (res.data?.success) {
+      console.log("HoldSale Data", res.data);
+
+      const isSuccess = 
+        res.data?.success || 
+        res.data?.status === 'success' || 
+        res.data?.status === 'successfully' ||
+        (typeof res.data === 'string' && (res.data.includes('invoice') || res.data.includes('printableArea')));
+
+      if (isSuccess) {
         get().clearCart();
         return true;
+      } else {
+        const msg = res.data?.message || "Failed to hold sale. Server returned an error.";
+        useDialogStore.getState().showDialog('ERROR', { errorMessage: msg });
       }
-    } catch (e) {
+    } catch (e: any) {
+      const serverError = e.response?.data?.message || e.message;
+      useDialogStore.getState().showDialog('ERROR', { 
+        errorMessage: `Hold Sale Failed: ${serverError}` 
+      });
       console.error("Failed to hold sale", e);
     }
     return false;

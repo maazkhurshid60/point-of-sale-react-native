@@ -8,6 +8,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import RootNavigator from './src/navigation/RootNavigator';
 import { useNetworkListener } from './src/hooks/useNetworkListener';
 import InternetConnectivityStatusWidget from './src/components/InternetConnectivityStatusWidget';
+import FPSMonitor from './src/components/FPSMonitor';
 
 const queryClient = new QueryClient();
 
@@ -33,10 +34,11 @@ export default function App() {
             <NavigationContainer>
               <RootNavigator />
             </NavigationContainer>
-            <InternetConnectivityStatusWidget />
           </View>
         </QueryClientProvider>
       </SafeAreaProvider>
+      <InternetConnectivityStatusWidget />
+      <FPSMonitor />
     </GestureHandlerRootView>
   );
 }

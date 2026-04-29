@@ -1,12 +1,5 @@
 import React from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  FlatList,
-  ActivityIndicator,
-  RefreshControl,
-} from 'react-native';
+import { View, Text, TouchableOpacity, FlatList, ActivityIndicator, RefreshControl, useWindowDimensions } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS } from '../../constants/colors';
 import { FloorModel } from '../../models';
@@ -14,38 +7,20 @@ import { useRestaurantFloorsController } from './hooks/useRestaurantFloorsContro
 import { styles } from './RestaurantFloorsScreen.styles';
 
 export default function RestaurantFloorsScreen() {
-  const {
-    width,
-    setScreen,
-    listOfFloors,
-    isLoading,
-    refreshing,
-    handleAddFloor,
-    onRefresh,
-    handleSelectFloor,
-  } = useRestaurantFloorsController();
+  const { width } = useWindowDimensions();
+  const { setScreen, listOfFloors, isLoading, refreshing, handleAddFloor, onRefresh, handleSelectFloor } = useRestaurantFloorsController();
 
   const renderFloorItem = ({ item }: { item: FloorModel }) => {
     const numColumns = width > 700 ? 3 : 2;
     const itemWidth = (width - 60) / numColumns;
-
     return (
-      <TouchableOpacity
-        style={[styles.floorCard, { width: itemWidth }]}
-        onPress={() => handleSelectFloor(item)}
-      >
+      <TouchableOpacity style={[styles.floorCard, { width: itemWidth }]} onPress={() => handleSelectFloor(item)}>
         <View style={styles.cardHeader}>
-          <View style={styles.iconBox}>
-            <MaterialCommunityIcons name="layers-outline" size={24} color={COLORS.primary} />
-          </View>
-          <View style={styles.statusBadge}>
-            <Text style={styles.statusText}>Active</Text>
-          </View>
+          <View style={styles.iconBox}><MaterialCommunityIcons name="layers-outline" size={24} color={COLORS.primary} /></View>
+          <View style={styles.statusBadge}><Text style={styles.statusText}>Active</Text></View>
         </View>
-
         <Text style={styles.floorName} numberOfLines={1}>{item.floorName}</Text>
         <Text style={styles.floorNo}>Floor No: {item.floorNo}</Text>
-
         <View style={styles.cardFooter}>
           <View style={styles.statItem}>
             <Ionicons name="cube-outline" size={14} color="#718096" />
@@ -68,7 +43,6 @@ export default function RestaurantFloorsScreen() {
           <Ionicons name="add" size={24} color="white" />
         </TouchableOpacity>
       </View>
-
       {isLoading && !refreshing ? (
         <View style={styles.loaderContainer}>
           <ActivityIndicator size="large" color={COLORS.primary} />
@@ -80,10 +54,9 @@ export default function RestaurantFloorsScreen() {
           keyExtractor={(item) => item.floorId.toString()}
           renderItem={renderFloorItem}
           numColumns={width > 700 ? 3 : 2}
+          key={width > 700 ? '3cols' : '2cols'}
           contentContainerStyle={styles.listContent}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} />
-          }
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} />}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <MaterialCommunityIcons name="floor-plan" size={80} color="#E2E8F0" />

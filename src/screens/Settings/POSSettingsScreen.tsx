@@ -76,7 +76,7 @@ export const POSSettingsScreen: React.FC = () => {
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.headerNav}>
-          <TouchableOpacity style={styles.backButton} onPress={() => setScreen('DEFAULT')}>
+          <TouchableOpacity style={styles.backButton} onPress={() => setScreen('POS_BILLING')}>
             <FontAwesome6 name="arrow-left" size={20} color={COLORS.primary} />
             <Text style={styles.backText}>Dashboard</Text>
           </TouchableOpacity>
